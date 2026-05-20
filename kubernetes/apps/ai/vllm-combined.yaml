@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vllm-system
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-model-cache
+  namespace: vllm-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-arc-server
+  namespace: vllm-system
+  labels:
+    app: vllm-arc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-arc
+  template:
+    metadata:
+      labels:
+        app: vllm-arc
+    spec:
+      containers:
+        - name: vllm
+          # The official Intel-maintained XPU image for vLLM
+          image: intel/vllm:xpu
+          command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+          args:
+            - "--model"
+            - "Qwen/Qwen2.5-1.5B-Instruct" # A smaller model recommended for the 8GB A580
+            - "--port"
+            - "8000"
+            - "--max-model-len"
+            - "2048" # Constrain context window to fit within 8GB VRAM
+            # - "--quantization"
+            # - "fp8" # Uncomment if using an FP8 quantized model for better throughput
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token-secret
+                  key: token
+            # Essential for optimizing PyTorch/Intel OneAPI performance
+            - name: SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS
+              value: "1"
+          resources:
+            limits:
+              # Update to  if your node advertises the newer driver
+              gpu.intel.com/xe: "1"
+              memory: "16Gi"
+              cpu: "4"
+          ports:
+            - containerPort: 8000
+              name: http
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /root/.cache/huggingface
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache-volume
+          persistentVolumeClaim:
+            claimName: vllm-model-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi # Required for vLLM distributed execution and tensor ops
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-service
+  namespace: vllm-system
+spec:
+  selector:
+    app: vllm-arc
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

@@ -78,11 +78,14 @@ spec:
           command:
             - /bin/sh
             - -c
+            command:
+            - /bin/sh
+            - -c
             - |
               echo "Starting sync..."
-              # Fetch and perform a "clean" copy
-              kubectl get secret coroot-db-app -n database-system -o json | \
-              jq 'del(.metadata.namespace, .metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.ownerReferences, .metadata.managedFields)' | \
+              # Pure kubectl clean copy, no jq required
+              kubectl get secret coroot-db-app -n database-system -o yaml | \
+              kubectl label --local -f - argocd.argoproj.io/instance- --dry-run=client -o yaml | \
               kubectl apply -n coroot-system -f -
               echo "Sync complete."
       restartPolicy: OnFailure

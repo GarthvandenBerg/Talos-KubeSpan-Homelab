@@ -1,17 +1,22 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: public-gateway
-  namespace: default
+  name: home-gateway
+  namespace: gateway-system
   annotations:
-    # This tells Cilium to specifically use your public pool
-    io.cilium/lb-ip-am-static: "${public_ip}"
+    io.cilium/lb-ip-am-static: 192.168.2.201
 spec:
   gatewayClassName: cilium # Requires Gateway API CRDs to be present
   listeners:
     - name: http
       port: 80
       protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      port: 443
+      protocol: HTTPS
       allowedRoutes:
         namespaces:
           from: All

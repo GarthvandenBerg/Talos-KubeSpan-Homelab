@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/GarthvandenBerg/talos-homelab.git"
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: kubernetes/bootstrap # Points back to itself to manage the bootstrap
   destination:
@@ -27,7 +27,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/GarthvandenBerg/talos-homelab.git"
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: kubernetes/system 
     directory:
@@ -49,7 +49,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/GarthvandenBerg/talos-homelab.git"
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: kubernetes/apps
     directory:
@@ -71,7 +71,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "https://github.com/GarthvandenBerg/talos-homelab.git"
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: kubernetes/apps/coroot-deployment
     directory:
