@@ -1,0 +1,44 @@
+cluster:
+  network:
+    cni:
+      name: none
+  proxy:
+    disabled: true
+  discovery:
+    enabled: true
+    registries:
+      kubernetes:
+        disabled: true
+      service: {}
+machine:
+  features:
+    hostDNS:
+      enabled: false
+      forwardKubeDNSToHost: false
+  install:
+    disk: /dev/sda
+    wipe: true
+  kernel:
+    modules:
+      - name: iscsi_tcp
+      - name: nbd
+      - name: libiscsi
+      - name: rpcsec_gss_krb5
+  kubelet:
+    extraMounts:
+      - destination: /var/lib/longhorn
+        type: bind
+        source: /var/lib/longhorn
+        options: [bind, rshared, rw]
+      - destination: /opt/cni/bin
+        type: bind
+        source: /var/lib/cni/bin
+        options: [bind, rshared, rw]
+      - destination: /var/lib/local-path
+        type: bind
+        source: /var/lib/local-path
+        options: [bind, rshared, rw]
+      - destination: /var/run/cilium/tetragon
+        type: bind
+        source: /var/run/cilium/tetragon
+        options: [bind, rshared, rw]

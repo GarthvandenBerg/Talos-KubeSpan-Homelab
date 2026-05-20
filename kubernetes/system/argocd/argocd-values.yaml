@@ -1,0 +1,18 @@
+global:
+  domain: argocd.cluster.local
+
+server:
+  extraArgs:
+    - --insecure 
+
+controller:
+  statusProcessors: 20
+  operationProcessors: 10
+
+redis:
+  exporter:
+    enabled: true
+
+repoServer:
+  metrics:
+    enabled: true

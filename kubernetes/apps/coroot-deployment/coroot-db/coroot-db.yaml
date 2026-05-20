@@ -1,0 +1,34 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: coroot-db
+  namespace: database-system
+  annotations:
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  instances: 2
+
+  bootstrap:
+    initdb:
+      database: coroot 
+      owner: coroot
+
+  storage:
+    size: 10Gi
+    storageClass: local-path
+
+  backup:
+    barmanObjectStore:
+      destinationPath : "s3://database-backup/coroot-db"
+      endpointURL: "http://192.168.70.100:9000"
+      s3Credentials:
+        accessKeyId:
+          name: s3-details
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: s3-details
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip

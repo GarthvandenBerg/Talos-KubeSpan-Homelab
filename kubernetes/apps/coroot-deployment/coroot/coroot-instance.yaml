@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coroot-system
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: coroot.com/v1
+kind: Coroot
+metadata:
+  name: coroot
+  namespace: coroot-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  communityEdition: {}
+
+  postgres:
+    host: "coroot-db-rw.database-system.svc.cluster.local"
+    port: 5432
+    database: "coroot"
+    user: "coroot"               
+    passwordSecret:               
+      name: "coroot-db-app"
+      key: "password"
+    params:                       
+      sslmode: "disable"
+
+  storeMetricsInClickhouse: true
+  nodeAgent: {}
+  clusterAgent: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: secret-sync-sa
+  namespace: coroot-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secret-sync-role
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "services"]
+    verbs: ["get", "list", "create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: secret-sync-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: secret-sync-role
+subjects:
+  - kind: ServiceAccount
+    name: secret-sync-sa
+    namespace: coroot-system
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sync-db-secret
+  namespace: coroot-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      serviceAccountName: secret-sync-sa
+      containers:
+        - name: sync
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting sync..."
+              # Fetch and perform a "clean" copy
+              kubectl get secret coroot-db-app -n database-system -o json | \
+              jq 'del(.metadata.namespace, .metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.ownerReferences, .metadata.managedFields)' | \
+              kubectl apply -n coroot-system -f -
+              echo "Sync complete."
+      restartPolicy: OnFailure

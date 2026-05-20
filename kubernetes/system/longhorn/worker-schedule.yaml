@@ -1,0 +1,27 @@
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: talos-worker-01
+  namespace: longhorn-system
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=tru
+spec:
+  allowScheduling: true
+  disks:
+    default-disk-1:
+      allowScheduling: true
+      path: "/var/lib/longhorn"
+---
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: talos-worker-02
+  namespace: longhorn-system
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=tru
+spec:
+  allowScheduling: true
+  disks:
+    default-disk-1:
+      allowScheduling: true
+      path: "/var/lib/longhorn"
