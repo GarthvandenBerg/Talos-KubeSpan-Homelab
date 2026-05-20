@@ -86,7 +86,7 @@ locals {
   node_data       = yamldecode(templatefile("${path.module}/nodes.yaml", {
     public_ip = var.PUBLIC_IP_NODE
   }))
-  system_path     = "${path.module}/../kubernetes/system"
+  system_path     = "${path.root}/../kubernetes/system"
   ctl_list        = [for n in local.node_data.nodes : n if n.type == "controlplane"]
   work_list       = [for n in local.node_data.nodes : n if n.type == "worker"]
   cluster_name    = local.node_data.cluster_name
@@ -121,20 +121,20 @@ locals {
       target_node  = try(node.nodename, null) 
       storage_pool = try(node.storage_pool, null) 
       mac          = try(node.mac, null) 
-      cores        = 4
-      memory       = 16384
+      cores        = node.name == "talos-worker-01" ? 8 : 4
+      memory       = node.name == "talos-worker-01" ? 32768 : 16384
       disk         = "200G"
 
-      talos_image  = node.name == "kirk" ? "factory.talos.dev/nocloud-installer/c1314b5868501a7629ed3acba25bd4201087fcbeb207347c5542b8110ed17e56:${local.factory_id}:${local.talos_version}" : "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
+      talos_image  = node.nodename == "kirk" ? "factory.talos.dev/nocloud-installer/c1314b5868501a7629ed3acba25bd4201087fcbeb207347c5542b8110ed17e56:${local.factory_id}:${local.talos_version}" : "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
       # This is specific to my setup where kirk has the GPU inside.
-      pci_devices = node.name == "kirk" ? [
+      pci_devices = node.nodename == "kirk" ? [
         {
-          id   = "0000:09:00.0" 
+          device_map_name = "A580"
           pcie  = true
           rombar = true
-          primary = false # Keep novnc as main display. 
+          primary = false # Keep novnc as main display.
         }
-      ] : [] # Keep it empty for all other workers 
+      ] : [] # Keep it empty for all other workers
     }
   }
   all_nodes = merge(local.ctl_map, local.work_map)
@@ -164,7 +164,8 @@ resource "proxmox_virtual_environment_vm" "vm_instance" {
   dynamic "hostpci" {
     for_each = lookup(each.value, "pci_devices", [])
     content {
-      device   = hostpci.value.id
+      device   = "hostpci${hostpci.key}"
+      mapping  = hostpci.value.device_map_name
       pcie     = hostpci.value.pcie
       rombar   = hostpci.value.rombar
     }
@@ -438,7 +439,7 @@ resource "kubectl_manifest" "gateway_api_crds" {
   yaml_body = each.value
   server_side_apply = true
   force_conflicts = true
-  depends_on = [null_resource.wait_for_api, null_resource.talos_upgrade]
+  depends_on = [null_resource.wait_for_api]
 }
 
 provider "helm" {
@@ -451,13 +452,13 @@ provider "helm" {
 }
 
 data "kubectl_file_documents" "cilium_configs" {
-  content = templatefile("${local.system_path}/cilium/cilium-ip-pool.yaml", {
+  content = templatefile("${local.system_path}/cilium/cilium-ip-pools.yaml", {
     public_ip = var.PUBLIC_IP_NODE
   })
 }
 
 data "kubectl_file_documents" "gateway_manifest" {
-  content = templatefile("${local.system_path}/cilium/gateway.yaml", {
+  content = templatefile("${local.system_path}/cilium/external-gateway.yaml", {
     public_ip = var.PUBLIC_IP_NODE
   })
 }
@@ -500,12 +501,16 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-
-# 2. Apply cilium ip pool + global_l2_policy -> can be updated with terraform or ArgoCD
 resource "kubectl_manifest" "cilium_resources" {
   for_each  = data.kubectl_file_documents.cilium_configs.manifests
   yaml_body = each.value
   depends_on = [time_sleep.wait_for_cilium_crds]
+}
+
+resource "kubectl_manifest" "cilium_gateways" {
+  for_each  = data.kubectl_file_documents.gateway_manifest.manifests
+  yaml_body = each.value
+  depends_on = [time_sleep.wait_for_cilium_crds] 
 }
 
 data "kubectl_file_documents" "longhorn_rbac_docs" {
