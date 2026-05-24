@@ -75,9 +75,6 @@ spec:
       containers:
         - name: sync
           image: bitnami/kubectl:latest
-          command:
-            - /bin/sh
-            - -c
             command:
             - /bin/sh
             - -c
