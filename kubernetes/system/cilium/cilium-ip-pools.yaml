@@ -43,7 +43,7 @@ metadata:
 spec:
   nodeSelector:
     matchLabels:
-      l2-announce: true
+      l2-announce: "true"
   ipPools:
     - local-pool
   interfaces:

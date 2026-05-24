@@ -58,6 +58,8 @@ variable "nb_key" {
   sensitive = true
 }
 
+
+
 # --- Provider ---
 terraform {
   required_providers {
@@ -213,7 +215,6 @@ resource "proxmox_virtual_environment_vm" "vm_instance" {
     ssd          = true
     iothread     = true
   }
-
   network_device {
     bridge      = "VLAN2"
     model       = "virtio"
@@ -269,8 +270,8 @@ data "talos_machine_configuration" "controlplane_proxmox" {
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
-    templatefile("${path.module}/../.talos/patches/netbird-patch.yaml", { netbirdkey = var.nb_key }),
     file("${path.module}/../.talos/patches/vip-patch.yaml"),
+    templatefile("${path.module}/../.talos/patches/netbird-patch.yaml", { netbirdkey = var.nb_key }),
     yamlencode({
       machine = {
         install = {
@@ -321,7 +322,7 @@ resource "talos_machine_configuration_apply" "worker" {
 
 resource "talos_machine_bootstrap" "bootstrap" {
   client_configuration = talos_machine_secrets.machine_secrets.client_configuration
-  node                 = local.ctl_list[0].ip 
+  node                 = local.ctl_list[0].ip
   depends_on           = [talos_machine_configuration_apply.cp]
 }
 
@@ -357,7 +358,7 @@ resource "time_sleep" "wait_first_boot" {
 
 
 resource "null_resource" "wait_for_api" {
-  depends_on = [talos_cluster_kubeconfig.kubeconfig]
+  depends_on = [talos_cluster_kubeconfig.kubeconfig, time_sleep.wait_first_boot]
     provisioner "local-exec" {
       interpreter = ["bash", "-c"]
       command     = <<EOF
@@ -380,43 +381,6 @@ EOF
   }
 }
 
-data "http" "gateway_api_manifests" {
-  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/experimental-install.yaml"
-}
-
-data "kubectl_file_documents" "gateway_crds" {
-  content = data.http.gateway_api_manifests.response_body
-}
-
-resource "kubectl_manifest" "gateway_api_crds" {
-  for_each  = data.kubectl_file_documents.gateway_crds.manifests
-  yaml_body = each.value
-  server_side_apply = true
-  force_conflicts = true
-  depends_on = [null_resource.wait_for_api]
-}
-
-provider "helm" {
-  kubernetes = {
-    host                   = "https://${var.K8SSERVICEHOST}:6443"
-    client_certificate     = base64decode(talos_cluster_kubeconfig.kubeconfig.kubernetes_client_configuration.client_certificate)
-    client_key             = base64decode(talos_cluster_kubeconfig.kubeconfig.kubernetes_client_configuration.client_key)
-    cluster_ca_certificate = base64decode(talos_cluster_kubeconfig.kubeconfig.kubernetes_client_configuration.ca_certificate)
-  }
-}
-
-data "kubectl_file_documents" "cilium_configs" {
-  content = templatefile("${local.system_path}/cilium/cilium-ip-pools.yaml", {
-    public_ip = var.PUBLIC_IP_NODE
-  })
-}
-
-data "kubectl_file_documents" "gateway_manifest" {
-  content = templatefile("${local.system_path}/cilium/external-gateway.yaml", {
-    public_ip = var.PUBLIC_IP_NODE
-  })
-}
-
 resource "helm_release" "cilium" {
   name       = "cilium"
   repository = "https://helm.cilium.io/"
@@ -429,7 +393,7 @@ resource "helm_release" "cilium" {
   timeout       = 900 # Long timeout to ensure cilium pulls everything it needs and we don't get errors.
   
   values     = [file("${local.system_path}/cilium/cilium-values.yaml")]
-  depends_on = [null_resource.wait_for_api, kubectl_manifest.gateway_api_crds]
+  depends_on = [null_resource.wait_for_api, kubectl_manifest.cilium_gateways]
 
 }
 
@@ -503,6 +467,66 @@ resource "helm_release" "longhorn" {
   values = [
     file("${local.system_path}/longhorn/longhorn-values.yaml")
   ]
+}
+
+resource "kubectl_manifest" "longhorn_control_plane_config" {
+  for_each   = nonsensitive(local.ctl_map)
+  server_side_apply = true
+  force_conflicts   = true
+
+  yaml_body = yamlencode({
+    apiVersion = "longhorn.io/v1beta2"
+    kind       = "Node"
+    metadata = {
+      name      = each.key
+      namespace = "longhorn-system"
+    }
+    spec = {
+      allowScheduling = false
+    }
+  })
+  depends_on = [helm_release.longhorn]
+}
+
+# 2. Enable storage scheduling and map paths on all Worker Nodes
+resource "kubectl_manifest" "longhorn_worker_config" {
+  for_each   = nonsensitive(local.work_map)
+  server_side_apply = true
+  force_conflicts   = true
+
+  yaml_body = yamlencode({
+    apiVersion = "longhorn.io/v1beta2"
+    kind       = "Node"
+    metadata = {
+      name      = each.key
+      namespace = "longhorn-system"
+    }
+    spec = {
+      allowScheduling = true
+      disks = {
+        "default-disk-1" = {
+          allowScheduling = true
+          path            = "/var/lib/longhorn"
+        }
+      }
+    }
+  })
+  depends_on = [helm_release.longhorn]
+}
+
+resource "kubernetes_labels" "worker_node_roles" {
+  for_each    = nonsensitive(local.work_map)
+  api_version = "v1"
+  kind        = "Node"
+  force       = true
+  metadata {
+    name = each.key
+  }
+
+  labels = {
+    "node-role.kubernetes.io/worker" = "true"
+  }
+  depends_on = [time_sleep.wait_first_boot]
 }
 
 resource "kubernetes_namespace_v1" "apps" {

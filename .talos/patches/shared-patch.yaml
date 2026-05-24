@@ -1,4 +1,7 @@
 cluster:
+  apiServer:
+    certSANs:
+      - "192.168.2.5"
   network:
     cni:
       name: none
@@ -25,6 +28,9 @@ machine:
       - name: libiscsi
       - name: rpcsec_gss_krb5
   kubelet:
+    nodeIP:
+      validSubnets:
+        - 100.91.0.0/16
     extraMounts:
       - destination: /var/lib/longhorn
         type: bind
