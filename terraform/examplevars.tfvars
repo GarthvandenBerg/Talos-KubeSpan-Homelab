@@ -13,3 +13,5 @@ PUBLIC_IP_NODE = ""
 
 GIT_KEY = "can be anything normally your name"
 GIT_PASS = "Token generated in github"
+
+nb_key = "key"

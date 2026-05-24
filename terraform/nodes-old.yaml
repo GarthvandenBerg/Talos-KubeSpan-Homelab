@@ -1,0 +1,14 @@
+  - name: talos-ctl-02
+    ip: 192.168.2.11
+    type: controlplane
+    nodename: kirk
+    platform: proxmox
+    storage_pool: ssd-pool
+    mac: bc:24:11:42:94:12
+  - name: talos-ctl-03
+    ip: 192.168.2.12
+    type: controlplane
+    platform: proxmox
+    nodename: picard
+    storage_pool: local-zfs
+    mac: bc:24:12:52:64:1b
