@@ -19,11 +19,11 @@ spec:
     host: "coroot-db-rw.database-system.svc.cluster.local"
     port: 5432
     database: "coroot"
-    user: "coroot"               
-    passwordSecret:               
+    user: "coroot"
+    passwordSecret:
       name: "coroot-db-app"
       key: "password"
-    params:                       
+    params:
       sslmode: "disable"
 
   storeMetricsInClickhouse: true
@@ -75,7 +75,7 @@ spec:
       containers:
         - name: sync
           image: bitnami/kubectl:latest
-            command:
+          command:
             - /bin/sh
             - -c
             - |
