@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: allow-read-secrets
+  namespace: database-system # Source namespace
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sync-sa-read-binding
+  namespace: database-system # Source namespace
+subjects:
+  - kind: ServiceAccount
+    name: secret-sync-sa
+    namespace: coroot-system # Target namespace where the job lives
+roleRef:
+  kind: Role
+  name: allow-read-secrets
+  apiGroup: rbac.authorization.k8s.io
