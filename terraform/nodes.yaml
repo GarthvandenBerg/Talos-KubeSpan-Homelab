@@ -1,5 +1,5 @@
 cluster_name: talos-homelab-cluster
-talos_version: v1.13.2
+talos_version: v1.12.7
 factory_id: 4c8ba948fcba14c4e61592b794c2bf3cacc48cc509712d5894ced6f0ade993a4
 #Proxmox Configurtion
 nodes:
