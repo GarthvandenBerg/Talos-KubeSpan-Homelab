@@ -79,17 +79,13 @@ spec:
             - /bin/sh
             - -c
             - |
-              set -eo pipefail # Fail immediately if any command in a pipe fails!
-
-              echo "Checking if source secret exists..."
-              until kubectl get secret coroot-db-app -n database-system > /dev/null 2>&1; do
-                echo "Waiting for coroot-db-app secret to be created in database-system..."
-                sleep 5
-              done
-
+              set -eo pipefail
               echo "Starting sync..."
+
               kubectl get secret coroot-db-app -n database-system -o yaml | \
               kubectl label --local -f - argocd.argoproj.io/instance- --dry-run=client -o yaml | \
-              kubectl apply -n coroot-system -f -
+              sed 's/namespace: database-system/namespace: coroot-system/' | \
+              kubectl apply -f -
+
               echo "Sync complete."
       restartPolicy: OnFailure
