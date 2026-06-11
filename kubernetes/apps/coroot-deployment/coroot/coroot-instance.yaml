@@ -83,8 +83,10 @@ spec:
               echo "Starting sync..."
 
               kubectl get secret coroot-db-app -n database-system -o yaml | \
+              grep -vE 'resourceVersion:|uid:|creationTimestamp:' | \
               kubectl label --local -f - argocd.argoproj.io/instance- --dry-run=client -o yaml | \
               sed 's/namespace: database-system/namespace: coroot-system/' | \
+              kubectl annotate --local -f - argocd.argoproj.io/compare-options=IgnoreExtraneous argocd.argoproj.io/sync-options=Prune=false --dry-run=client -o yaml | \
               kubectl apply -f -
 
               echo "Sync complete."
