@@ -10,6 +10,9 @@ spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:16
   instances: 2
 
+  affinity:
+    podAntiAffinityType: required
+
   bootstrap:
     initdb:
       database: coroot 
