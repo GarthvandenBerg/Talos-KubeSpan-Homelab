@@ -10,7 +10,7 @@ spec:
   source:
     chart: coroot-operator
     repoURL: https://coroot.github.io/helm-charts
-    targetRevision: 0.9.4
+    targetRevision: 0.9.8
   destination:
     server: https://kubernetes.default.svc
     namespace: coroot-system
