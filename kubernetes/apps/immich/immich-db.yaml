@@ -2,7 +2,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: immich-db
-  namespace: immich
+  namespace: database-system
   annotations:
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
     argocd.argoproj.io/sync-wave: "1" # Deploy DB before Immich sync wave 2
