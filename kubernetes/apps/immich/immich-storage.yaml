@@ -20,7 +20,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: immich-nfs-pvc
   namespace: immich
-   annotations:
+  annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   accessModes:
