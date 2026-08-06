@@ -8,7 +8,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1" # Deploy DB before Immich sync wave 2
 spec:
   # MUST use a pgvector / vectorchord enabled image for Immich
-  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16-0.1.1
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16-0.3.0
   instances: 2
 
   affinity:
@@ -18,6 +18,9 @@ spec:
     initdb:
       database: immich
       owner: immich
+      postInitSQL:
+        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+        - CREATE EXTENSION IF NOT EXISTS "cube";
 
   storage:
     size: 20Gi
