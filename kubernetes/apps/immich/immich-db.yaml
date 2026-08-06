@@ -11,6 +11,11 @@ spec:
   imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16-0.3.0
   instances: 2
 
+  postgresql:
+    shared_preload_libraries:
+      - "vchord.so"
+      - "pg_stat_statements"
+
   affinity:
     podAntiAffinityType: required
 
@@ -24,7 +29,7 @@ spec:
 
   storage:
     size: 20Gi
-    storageClass: local-path # Or your preferred block storage class
+    storageClass: local-path
 
   backup:
     barmanObjectStore:
