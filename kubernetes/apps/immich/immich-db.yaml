@@ -1,0 +1,38 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: immich-db
+  namespace: immich
+  annotations:
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+    argocd.argoproj.io/sync-wave: "1" # Deploy DB before Immich sync wave 2
+spec:
+  # MUST use a pgvector / vectorchord enabled image for Immich
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16-0.1.1
+  instances: 2
+
+  affinity:
+    podAntiAffinityType: required
+
+  bootstrap:
+    initdb:
+      database: immich
+      owner: immich
+
+  storage:
+    size: 20Gi
+    storageClass: local-path # Or your preferred block storage class
+
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://database-backup/immich-db"
+      endpointURL: "http://192.168.70.100:9000"
+      s3Credentials:
+        accessKeyId:
+          name: s3-details
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: s3-details
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip

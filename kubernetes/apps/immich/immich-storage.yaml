@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-nfs-pv
+spec:
+  capacity:
+    storage: 500Gi # Adjust size to match your storage quota/needs
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    path: /virtualdisks/immich_files # Replace with your actual NFS export path
+    server: 100.91.97.25     # Replace with your NAS's NetBird IP address
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-nfs-pvc
+  namespace: immich
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 500Gi
+  volumeName: immich-nfs-pv
