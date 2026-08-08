@@ -20,34 +20,23 @@ spec:
     targetRevision: 0.13.1
     helm:
       values: |
-        # Main Immich library PVC reference
         immich:
           persistence:
             library:
+              enabled: true
               existingClaim: immich-nfs-pvc
-
-        # Global environment variables for all Immich containers
-        controllers:
-          main:
-            containers:
-              main:
-                env:
-                  DB_HOSTNAME: immich-db-rw.database-system.svc.cluster.local
-                  DB_USERNAME: immich
-                  DB_DATABASE_NAME: immich
-                  DB_PASSWORD:
-                    valueFrom:
-                      secretKeyRef:
-                        name: immich-db-app
-                        key: password
-
-        # Attach subPath directly to the server persistence mount
-        server:
-          persistence:
-            library:
               subPath: immich_files
 
-        # Enable bundled Valkey (Redis replacement)
+          env:
+            DB_HOSTNAME: immich-db-rw.database-system.svc.cluster.local
+            DB_USERNAME: immich
+            DB_DATABASE_NAME: immich
+            DB_PASSWORD:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-db-app
+                  key: password
+
         valkey:
           enabled: true
 
