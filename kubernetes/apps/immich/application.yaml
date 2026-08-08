@@ -10,8 +10,6 @@ kind: Application
 metadata:
   name: immich
   namespace: argocd-system
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   source:
@@ -41,7 +39,6 @@ spec:
 
         valkey:
           enabled: true
-
   destination:
     server: https://kubernetes.default.svc
     namespace: immich
