@@ -12,7 +12,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: ""
   nfs:
-    path: /mnt/latinum/virtualdisks
+    path: /mnt/latinum/virtualdisks/immich_files
     server: 100.91.97.25
 ---
 apiVersion: v1

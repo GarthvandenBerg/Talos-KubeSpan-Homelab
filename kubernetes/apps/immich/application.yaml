@@ -39,11 +39,6 @@ spec:
             library:
               existingClaim: immich-nfs-pvc
 
-        server:
-          persistence:
-            library:
-              subPath: immich_files
-
         valkey:
           enabled: true
 
