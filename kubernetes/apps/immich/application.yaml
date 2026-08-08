@@ -40,6 +40,18 @@ spec:
 
         valkey:
           enabled: true
+
+        server:
+          service:
+            main:
+              enabled: true
+              type: LoadBalancer
+              annotations:
+                lbipam.cilium.io/ips-pool: "local-pool"
+                lbipam.cilium.io/ips: "192.168.2.205"
+              ports:
+                http:
+                  port: 2283
   destination:
     server: https://kubernetes.default.svc
     namespace: immich
