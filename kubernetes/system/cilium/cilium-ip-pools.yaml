@@ -47,9 +47,4 @@ spec:
     - ^eth.*
   externalIPs: true
   loadBalancerIPs: true
-  serviceSelector:
-    matchExpressions:
-      - key: io.cilium/lb-ipam-ips-pool
-        operator: In
-        values:
-          - local-pool
+  serviceSelector: {}
