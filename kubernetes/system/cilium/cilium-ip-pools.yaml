@@ -45,10 +45,14 @@ spec:
   nodeSelector:
     matchLabels:
       l2-announce: "true"
-  ipPools:
-    - local-pool
   interfaces:
     - ^en.*
     - ^eth.*
   externalIPs: true
   loadBalancerIPs: true
+  serviceSelector:
+    matchExpressions:
+      - key: io.cilium/lb-ipam-ips-pool
+        operator: In
+        values:
+          - local-pool
