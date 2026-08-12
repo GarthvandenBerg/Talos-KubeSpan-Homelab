@@ -46,3 +46,82 @@ CLOUDFLARE_API_TOKEN=your_secret_api_token_here
 chmod 600 /etc/cloudflare.cred
 chown caddy:caddy /etc/cloudflare.cred
 ```
+
+
+Then setup keepalived for VIP for Caddy Main:
+```
+mkdir -p /etc/keepalived
+vi /etc/keepalived/keepalived.conf
+```
+```
+vrrp_script check_caddy {
+    script "pidof caddy"
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 51
+    priority 101
+    advert_int 1
+
+    authentication {
+        auth_type PASS
+        auth_pass CaddyHA2026Secret
+    }
+
+    virtual_ipaddress {
+        192.168.70.244/24
+    }
+
+    track_script {
+        check_caddy
+    }
+}
+```
+
+```
+rc-update add keepalived default
+service keepalived start
+```
+
+then for the other caddy server:
+```
+mkdir -p /etc/keepalived
+vi /etc/keepalived/keepalived.conf
+```
+```
+vrrp_script check_caddy {
+    script "pidof caddy"
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth0
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+
+    authentication {
+        auth_type PASS
+        auth_pass CaddyHA2026Secret
+    }
+
+    virtual_ipaddress {
+        192.168.70.244/24
+    }
+
+    track_script {
+        check_caddy
+    }
+}
+```
+
+```
+rc-update add keepalived default
+service keepalived start
+```
