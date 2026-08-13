@@ -20,6 +20,9 @@ spec:
       values: |
         installCRDs: true
         replicaCount: 2
+        metrics:
+          service:
+            enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: cfgate-system
