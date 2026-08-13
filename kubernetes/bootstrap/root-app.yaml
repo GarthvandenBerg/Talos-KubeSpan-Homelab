@@ -32,7 +32,6 @@ spec:
     path: kubernetes/system 
     directory:
       recurse: true
-      exclude: '**/cilium-ip-pool.yaml, **/external-gateway.yaml'
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -40,6 +39,18 @@ spec:
     automated:
       prune: true
       selfHeal: true
+  ignoreDifferences:
+    - group: cilium.io
+      kind: CiliumLoadBalancerIPPool
+      name: public-vps-pool
+      jsonPointers:
+        - /spec/blocks
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: public-gateway
+      namespace: gateway-system
+      jsonPointers:
+        - /metadata/annotations/io.cilium~1lb-ip-am-static
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application

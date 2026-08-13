@@ -20,3 +20,6 @@ cgroup:
 
 gateway_API:
   enabled: true
+
+l2announcements:
+  enabled: true

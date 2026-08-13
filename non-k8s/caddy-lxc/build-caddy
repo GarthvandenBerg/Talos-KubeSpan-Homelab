@@ -1,0 +1,5 @@
+#!/bin/bash
+docker build -t custom-caddy .
+docker create --name temp-container custom-caddy
+docker export temp-container | gzip > custom-caddy-lxc.tar.gz
+docker rm temp-container

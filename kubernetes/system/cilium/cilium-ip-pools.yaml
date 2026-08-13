@@ -17,12 +17,11 @@ spec:
   nodeSelector:
     matchLabels:
       kubernetes.io/hostname: earth
-  ipPools:
-    - public-vps-pool
   interfaces:
     - ".*"
   externalIPs: true
   loadBalancerIPs: true
+  serviceSelector: {}
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumLoadBalancerIPPool
@@ -53,3 +52,4 @@ spec:
     - ".*"
   externalIPs: true
   loadBalancerIPs: true
+  serviceSelector: {}
