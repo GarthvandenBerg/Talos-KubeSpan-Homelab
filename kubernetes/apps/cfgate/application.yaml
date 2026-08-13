@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cfgate-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cfgate
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/cfgate/charts
+    chart: cfgate
+    targetRevision: 1.4.0
+    helm:
+      values: |
+        installCRDs: true
+        replicaCount: 2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cfgate-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

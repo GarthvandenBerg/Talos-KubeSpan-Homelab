@@ -1,0 +1,59 @@
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareTunnel
+metadata:
+  name: homelab-tunnel
+  namespace: cfgate-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  tunnel:
+    name: homelab-tunnel
+  cloudflare:
+    accountId: "aef4344b329ab2186b99f0ba2bca6309"
+    secretRef:
+      name: cloudflare-credentials
+  cloudflared:
+    replicas: 2
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: cfgate
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  controllerName: cfgate.io/cloudflare-tunnel-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cloudflare-gateway
+  namespace: cfgate-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+    cfgate.io/tunnel-ref: cfgate-system/homelab-tunnel
+spec:
+  gatewayClassName: cfgate
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareDNS
+metadata:
+  name: homelab-dns-sync
+  namespace: cfgate-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  tunnelRef:
+    name: homelab-tunnel
+  zones:
+  - name: g-space.co.za
+  source:
+    gatewayRoutes:
+      enabled: true
