@@ -46,8 +46,6 @@ spec:
           - "true"
       - key: node-role.kubernetes.io/control-plane
         operator: DoesNotExist
-  ipPools:
-    - local-pool
   interfaces:
     - ".*"
   externalIPs: true
