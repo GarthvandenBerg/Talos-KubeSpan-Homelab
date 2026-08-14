@@ -38,8 +38,9 @@ metadata:
   name: local-announcement
 spec:
   nodeSelector:
-    matchLabels:
-      l2-announce: "true"
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
   interfaces:
     - ".*"
   externalIPs: true
