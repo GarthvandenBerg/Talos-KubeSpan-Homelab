@@ -31,7 +31,6 @@ spec:
   blocks:
     - start: "192.168.2.201"
       stop: "192.168.2.240"
-  disabled: false
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumL2AnnouncementPolicy
@@ -39,13 +38,8 @@ metadata:
   name: local-announcement
 spec:
   nodeSelector:
-    matchExpressions:
-      - key: l2-announce
-        operator: In
-        values:
-          - "true"
-      - key: node-role.kubernetes.io/control-plane
-        operator: DoesNotExist
+    matchLabels:
+      l2-announce: "true"
   interfaces:
     - ".*"
   externalIPs: true
