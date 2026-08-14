@@ -4,6 +4,11 @@ global:
 server:
   extraArgs:
     - --insecure 
+  service:
+    type: LoadBalancer
+    annotations:
+      lbipam.cilium.io/ips-pool: "local-pool"
+      lbipam.cilium.io/ips: "192.168.2.206"
 
 controller:
   statusProcessors: 20
