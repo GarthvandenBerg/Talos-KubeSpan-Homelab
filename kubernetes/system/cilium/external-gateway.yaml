@@ -8,8 +8,10 @@ kind: Gateway
 metadata:
   name: public-gateway
   namespace: gateway-system
+  labels:
+    type: vps-public
   annotations:
-    io.cilium/lb-ip-am-static: "${public_ip}"
+    lbipam.cilium.io/ips-pool: "public-vps-pool"
 spec:
   gatewayClassName: cilium
   listeners:
