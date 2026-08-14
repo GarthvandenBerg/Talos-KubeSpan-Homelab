@@ -21,7 +21,9 @@ spec:
     - ".*"
   externalIPs: true
   loadBalancerIPs: true
-  serviceSelector: {}
+  serviceSelector: 
+    matchLabels:
+      type: vps-public
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumLoadBalancerIPPool
@@ -38,9 +40,8 @@ metadata:
   name: local-announcement
 spec:
   nodeSelector:
-    matchExpressions:
-      - key: node-role.kubernetes.io/control-plane
-        operator: DoesNotExist
+    matchLabels:
+      l2-announce: "true"
   interfaces:
     - ".*"
   externalIPs: true
