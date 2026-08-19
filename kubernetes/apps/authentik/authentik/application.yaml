@@ -45,6 +45,14 @@ spec:
         redis:
           enabled: true
 
+        server:
+          service:
+            type: LoadBalancer
+            annotations:
+              lbipam.cilium.io/ips-pool: "local-pool"
+              lbipam.cilium.io/ips: "192.168.2.210"
+            servicePortHttp: 80
+
   destination:
     server: https://kubernetes.default.svc
     namespace: authentik-system
