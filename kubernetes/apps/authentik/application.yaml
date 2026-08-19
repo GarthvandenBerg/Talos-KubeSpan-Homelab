@@ -1,8 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authentik-system
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: authentik
-  namespace: argocd
+  namespace: argocd-system
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -32,11 +37,9 @@ spec:
             user: "authentik"
             port: 5432
 
-        # Disable chart-builtin postgresql since we use external instance
         postgresql:
           enabled: false
 
-        # Enable chart-managed Redis inside authentik-system
         redis:
           enabled: true
 
