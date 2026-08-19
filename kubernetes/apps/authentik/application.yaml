@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: authentik
+    repoURL: https://charts.goauthentik.io
+    targetRevision: 2026.8.0
+    helm:
+      releaseName: authentik
+      valuesObject:
+        global:
+          envValueFrom:
+            AUTHENTIK_SECRET_KEY:
+              secretKeyRef:
+                name: authentik-secrets
+                key: authentik-secret-key
+            AUTHENTIK_POSTGRESQL__PASSWORD:
+              secretKeyRef:
+                name: authentik-db-app
+                key: password
+
+        authentik:
+          postgresql:
+            host: "authentik-db-rw.database-system.svc.cluster.local"
+            name: "authentik"
+            user: "authentik"
+            port: 5432
+
+        # Disable chart-builtin postgresql since we use external instance
+        postgresql:
+          enabled: false
+
+        # Enable chart-managed Redis inside authentik-system
+        redis:
+          enabled: true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: authentik-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
