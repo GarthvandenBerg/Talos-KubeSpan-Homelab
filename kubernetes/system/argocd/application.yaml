@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: argo-cd
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 10.4.0
+    helm:
+      releaseName: argocd
+      valuesObject:
+        global:
+          domain: argocd.cluster.local
+
+        server:
+          extraArgs:
+            - --insecure 
+          service:
+            type: LoadBalancer
+            annotations:
+              lbipam.cilium.io/ips-pool: "local-pool"
+              lbipam.cilium.io/ips: "192.168.2.206"
+
+        controller:
+          statusProcessors: 20
+          operationProcessors: 10
+
+        redis:
+          exporter:
+            enabled: true
+
+        repoServer:
+          metrics:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
