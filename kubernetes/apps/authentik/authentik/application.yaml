@@ -21,6 +21,10 @@ spec:
       valuesObject:
         global:
           envValueFrom:
+            AUTHENTIK_SECRET_KEY:
+              secretKeyRef:
+                name: authentik-secret
+                key: secret-key
             AUTHENTIK_POSTGRESQL__PASSWORD:
               secretKeyRef:
                 name: authentik-db-app
