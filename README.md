@@ -47,7 +47,7 @@ terraform output -raw kubeconfig > kubeconfig.yaml
 ## ArgoCD 
 
 #### Get ArgoCD password
-kubectl -n argocd-system get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+```kubectl -n argocd-system get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo```
 
 #### Sync waves:
  - 1 Operators

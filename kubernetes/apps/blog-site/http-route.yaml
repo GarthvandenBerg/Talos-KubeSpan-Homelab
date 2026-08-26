@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: g-space-site
+  namespace: blog-site-system
+  labels:
+    app.kubernetes.io/name: g-space-site
+spec:
+  parentRefs:
+    - name: cloudflare-gateway
+      namespace: cfgate-system
+      sectionName: https
+  hostnames:
+    - "blog.g-space.co.za"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: g-space-site
+          port: 80
