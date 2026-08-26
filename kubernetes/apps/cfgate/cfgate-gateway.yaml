@@ -54,6 +54,7 @@ spec:
     name: homelab-tunnel
   zones:
   - name: g-space.co.za
+    proxied: true
   source:
     gatewayRoutes:
       enabled: true
