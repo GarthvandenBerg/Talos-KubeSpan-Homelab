@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
-    path: kubernetes/bootstrap # Points back to itself to manage the bootstrap
+    path: clusters/homelab-cluster/argocd/bootstrap # Points back to itself to manage the bootstrap
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -22,14 +22,14 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: system-operators-gateway
+  name: infrastructure-staging
   namespace: argocd-system
 spec:
   project: default
   source:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
-    path: kubernetes/system 
+    path: infrastructure/staging
     directory:
       recurse: true
   destination:
@@ -55,17 +55,37 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: apps
+  name: apps-staging
   namespace: argocd-system
 spec:
   project: default
   source:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
-    path: kubernetes/apps
+    path: apps/staging
     directory:
       recurse: true
-      exclude: 'coroot-deployment/*'
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-prod
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: apps/production
+    directory:
+      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -84,7 +104,7 @@ spec:
   source:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
-    path: kubernetes/apps/coroot-deployment
+    path: monitoring/staging
     directory:
       recurse: true
   destination:
