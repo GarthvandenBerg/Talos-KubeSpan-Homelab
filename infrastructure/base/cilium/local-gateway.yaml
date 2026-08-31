@@ -6,12 +6,13 @@ metadata:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: public-gateway
+  name: local-gateway
   namespace: gateway-system
   labels:
-    type: vps-public
+    type: local-gateway
   annotations:
-    lbipam.cilium.io/ips-pool: "public-vps-pool"
+    lbipam.cilium.io/ips-pool: "local-pool"
+    lbipam.cilium.io/ips: "192.168.2.240"
 spec:
   gatewayClassName: cilium
   listeners:

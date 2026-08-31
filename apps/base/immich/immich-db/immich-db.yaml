@@ -5,7 +5,7 @@ metadata:
   namespace: database-system
   annotations:
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
-    argocd.argoproj.io/sync-wave: "1" # Deploy DB before Immich sync wave 2
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   # MUST use a pgvector / vectorchord enabled image for Immich
   imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16-0.3.0
