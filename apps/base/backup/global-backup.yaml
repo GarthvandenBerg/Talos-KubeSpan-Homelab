@@ -32,6 +32,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2"
 spec:
+  immediate: true
   schedule: "2 0 0 * * *"
   backupOwnerReference: self
   cluster:
@@ -45,6 +46,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2"
 spec:
+  immediate: true
   schedule: "1 0 0 * * *"
   backupOwnerReference: self
   cluster:
