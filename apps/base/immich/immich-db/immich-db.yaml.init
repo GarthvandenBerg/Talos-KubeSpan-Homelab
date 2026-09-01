@@ -20,12 +20,12 @@ spec:
     podAntiAffinityType: required
 
   bootstrap:
-    recovery:
-      source: immich-db
-
-  storage:
-    size: 20Gi
-    storageClass: local-path
+    initdb:
+      database: immich
+      owner: immich
+      postInitSQL:
+        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+        - CREATE EXTENSION IF NOT EXISTS "cube";
 
   backup:
     barmanObjectStore:
@@ -40,17 +40,3 @@ spec:
           key: AWS_SECRET_ACCESS_KEY
       wal:
         compression: gzip
-
-  externalClusters:
-    - name: immich-db
-      barmanObjectStore:
-        destinationPath : "s3://database-backup/immich-db"
-      endpointURL: "http://192.168.70.100:9000"
-      s3Credentials:
-        accessKeyId:
-          name: s3-details
-          key: AWS_ACCESS_KEY_ID
-        secretAccessKey:
-          name: s3-details
-          key: AWS_SECRET_ACCESS_KEY
-
