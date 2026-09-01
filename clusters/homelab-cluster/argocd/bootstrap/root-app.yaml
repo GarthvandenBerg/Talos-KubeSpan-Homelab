@@ -1,0 +1,104 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd-system
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: clusters/homelab-cluster/argocd/bootstrap
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-staging
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: infrastructure/staging
+    directory:
+      recurse: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-staging
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: apps/staging
+    directory:
+      recurse: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-prod
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: apps/production
+    directory:
+      recurse: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: staging-monitoring
+  namespace: argocd-system
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    targetRevision: HEAD
+    path: monitoring/staging
+    directory:
+      recurse: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

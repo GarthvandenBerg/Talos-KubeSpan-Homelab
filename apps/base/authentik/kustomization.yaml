@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./authentik/application.yaml
+  - ./authentik/authentik-db-secret-sync.yaml
+  - ./authentik/authentik-db/authentik-db.yaml

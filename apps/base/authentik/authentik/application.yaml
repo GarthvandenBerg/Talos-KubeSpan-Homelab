@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authentik-system
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd-system
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: authentik
+    repoURL: https://charts.goauthentik.io
+    targetRevision: 2026.8.0
+    helm:
+      releaseName: authentik
+      valuesObject:
+        global:
+          env:
+            - name: AUTHENTIK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-secret
+                  key: secret-key
+            - name: AUTHENTIK_POSTGRESQL__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-db-app
+                  key: password
+
+        authentik:
+          postgresql:
+            host: "authentik-db-rw.database-system.svc.cluster.local"
+            name: "authentik"
+            user: "authentik"
+            port: 5432
+
+        postgresql:
+          enabled: false
+
+        redis:
+          enabled: true
+
+        server:
+          service:
+            type: LoadBalancer
+            annotations:
+              lbipam.cilium.io/ips-pool: "local-pool"
+              lbipam.cilium.io/ips: "192.168.2.210"
+            servicePortHttp: 80
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: authentik-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
