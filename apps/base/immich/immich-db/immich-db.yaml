@@ -45,12 +45,12 @@ spec:
     - name: immich-db
       barmanObjectStore:
         destinationPath : "s3://database-backup/immich-db"
-      endpointURL: "http://192.168.70.100:9000"
-      s3Credentials:
-        accessKeyId:
-          name: s3-details
-          key: AWS_ACCESS_KEY_ID
-        secretAccessKey:
-          name: s3-details
-          key: AWS_SECRET_ACCESS_KEY
+        endpointURL: "http://192.168.70.100:9000"
+        s3Credentials:
+          accessKeyId:
+            name: s3-details
+            key: AWS_ACCESS_KEY_ID
+          secretAccessKey:
+            name: s3-details
+            key: AWS_SECRET_ACCESS_KEY
 
