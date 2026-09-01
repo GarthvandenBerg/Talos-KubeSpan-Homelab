@@ -14,8 +14,9 @@ spec:
     podAntiAffinityType: required
 
   bootstrap:
-    recovery:
-      source: authentik-db
+    initdb:
+      database: authentik
+      owner: authentik
 
   storage:
     size: 10Gi
@@ -34,16 +35,3 @@ spec:
           key: AWS_SECRET_ACCESS_KEY
       wal:
         compression: gzip
-
-  externalClusters:
-    - name: authentik-db
-      barmanObjectStore:
-        destinationPath: "s3://database-backup/authentik-db"
-        endpointURL: "http://192.168.70.100:9000"
-        s3Credentials:
-          accessKeyId:
-            name: s3-details
-            key: AWS_ACCESS_KEY_ID
-          secretAccessKey:
-            name: s3-details
-            key: AWS_SECRET_ACCESS_KEY
