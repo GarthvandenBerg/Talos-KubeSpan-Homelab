@@ -30,6 +30,8 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: infrastructure/staging
+    kustomize:
+      buildOptions: "--enable-helm"
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -49,6 +51,8 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: apps/staging
+    kustomize:
+      buildOptions: "--enable-helm"
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -68,6 +72,8 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: apps/production
+    kustomize:
+      buildOptions: "--enable-helm"
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -87,6 +93,8 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: monitoring/staging
+    kustomize:
+      buildOptions: "--enable-helm"
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
