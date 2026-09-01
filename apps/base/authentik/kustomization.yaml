@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - ./authentik/application.yaml
   - ./authentik/authentik-db-secret-sync.yaml
-  - ./authentik/authentik-db/authentik-db.yaml
+  - ./authentik-db/authentik-db.yaml
