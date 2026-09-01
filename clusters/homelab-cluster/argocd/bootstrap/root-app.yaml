@@ -30,8 +30,6 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: infrastructure/staging
-    directory:
-      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -51,8 +49,6 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: apps/staging
-    directory:
-      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -72,8 +68,6 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: apps/production
-    directory:
-      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
@@ -85,7 +79,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: staging-monitoring
+  name: monitoring-staging
   namespace: argocd-system
 spec:
   project: default
@@ -93,8 +87,6 @@ spec:
     repoURL: "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
     targetRevision: HEAD
     path: monitoring/staging
-    directory:
-      recurse: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd-system
