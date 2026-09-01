@@ -85,7 +85,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: coroot-monitoring
+  name: staging-monitoring
   namespace: argocd-system
 spec:
   project: default

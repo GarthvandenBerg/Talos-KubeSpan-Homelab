@@ -9,7 +9,6 @@ global:
 
 defaultSettings:
   createDefaultDiskLabeledNodes: true
-  # Note: taintToleration is a semicolon-separated string in Longhorn settings
   taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule;node.cilium.io/agent-not-ready:NoSchedule"
   defaultDataPath: /var/lib/longhorn
   allowSchedulingOnControlPlaneNodes: false
@@ -18,7 +17,6 @@ defaultSettings:
   defaultMinimumNumberOfBackingImageCopies: 2
   preflightCheck: false
   mkfsPropagateAllowed: true
-  # Critical for older kernels/Talos compatibility
   mkfsExt4Parameters: "-O ^64bit,^metadata_csum"
   backupTarget: "s3://pvc-backup/longhorn/"
   backupTargetCredentialSecret: "longhorn-minio-creds"
@@ -33,12 +31,10 @@ persistence:
   defaultClassReplicaCount: 2
 
 csi:
-  # Required for Talos Linux
   kubeletRootDir: /var/lib/kubelet
   attacherReplicaCount: 2
   provisionerReplicaCount: 2
   resizerReplicaCount: 2
-  snapshotterReplicaCount: 2 # This often adds the missing RBAC rules
-
+  snapshotterReplicaCount: 2 
 service:
   ui: {}

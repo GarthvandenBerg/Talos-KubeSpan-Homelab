@@ -18,7 +18,7 @@ cgroup:
     enabled: false
   hostRoot: /sys/fs/cgroup
 
-gateway_API:
+gatewayAPI:
   enabled: true
 
 l2announcements:
