@@ -19,6 +19,14 @@ spec:
   affinity:
     podAntiAffinityType: required
 
+  managed:
+    roles:
+      - name: immich
+        ensure: present
+        login: true
+        passwordSecret:
+          name: immich-db-app
+
   bootstrap:
     recovery:
       source: immich-db

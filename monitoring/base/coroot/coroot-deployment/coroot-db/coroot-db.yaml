@@ -10,6 +10,14 @@ spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:16
   instances: 2
 
+  managed:
+    roles:
+      - name: coroot
+        ensure: present
+        login: true
+        passwordSecret:
+          name: coroot-db-app
+
   bootstrap:
     recovery:
       source: coroot-db

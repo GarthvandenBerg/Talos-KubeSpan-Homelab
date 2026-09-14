@@ -13,6 +13,14 @@ spec:
   affinity:
     podAntiAffinityType: required
 
+  managed:
+    roles:
+      - name: authentik
+        ensure: present
+        login: true
+        passwordSecret:
+          name: authentik-db-app
+
   bootstrap:
     recovery:
       source: authentik-db
