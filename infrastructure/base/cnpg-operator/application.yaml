@@ -21,3 +21,10 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpg-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
