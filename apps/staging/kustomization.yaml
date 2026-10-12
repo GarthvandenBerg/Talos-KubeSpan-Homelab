@@ -6,3 +6,4 @@ resources:
   - ./ggprohn
   - ./blog-site
   - ./immich
+  - ./backup
