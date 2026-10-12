@@ -1,0 +1,44 @@
+cluster_name: talos-homelab-cluster
+talos_version: v1.13.11
+factory_id: 4c8ba948fcba14c4e61592b794c2bf3cacc48cc509712d5894ced6f0ade993a4
+
+nodes:
+  - name: talos-ctl-1
+    ip: 192.168.2.10
+    type: controlplane
+    platform: proxmox
+    nodename: kirk
+    storage_pool: ssd-pool
+    mac: bc:24:01:12:d4:85
+
+  - name: talos-ctl-2
+    ip: 192.168.2.11
+    type: controlplane
+    platform: proxmox
+    nodename: kirk
+    storage_pool: ssd-pool
+    mac: bc:24:11:42:94:12
+
+  - name: talos-ctl-3
+    ip: 192.168.2.12
+    type: controlplane
+    platform: proxmox
+    nodename: kirk
+    storage_pool: ssd-pool
+    mac: bc:24:12:52:64:1b
+
+  - name: talos-worker-1
+    ip: 192.168.2.20
+    type: worker
+    platform: proxmox
+    nodename: kirk
+    storage_pool: ssd-pool
+    mac: bc:24:11:16:d4:95
+    
+  - name: talos-worker-2
+    ip: 192.168.2.21
+    type: worker
+    platform: proxmox
+    nodename: kirk
+    storage_pool: ssd-pool
+    mac: bc:24:11:26:84:95

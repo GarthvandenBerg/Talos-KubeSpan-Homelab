@@ -36,9 +36,13 @@ If you want custom names for your nodes make sure you set that in your DHCP serv
 
 CD into the Terraform folder then run:
 
+```
+cp examplevars.tfvars terraform.tfvars
+
 terraform init
 
 terraform apply 
+```
 
 #### Get your kubeconfig
 terraform output -raw kubeconfig > kubeconfig.yaml

@@ -91,7 +91,7 @@ locals {
   node_data       = yamldecode(templatefile("${path.module}/nodes.yaml", {
     public_ip = var.PUBLIC_IP_NODE
   }))
-  system_path     = "${path.root}/../kubernetes/system"
+  system_path     = "${path.root}/../infrastructure/base"
   ctl_list        = [for n in local.node_data.nodes : n if n.type == "controlplane"]
   work_list       = [for n in local.node_data.nodes : n if n.type == "worker"]
   cluster_name    = local.node_data.cluster_name
@@ -106,7 +106,6 @@ locals {
       id           = 800 + idx
       ip           = node.ip 
       platform     = node.platform
-      # Use try() to handle missing keys for baremetal
       target_node  = try(node.nodename, null)
       storage_pool = try(node.storage_pool, null) 
       mac          = try(node.mac, null)
@@ -126,20 +125,10 @@ locals {
       target_node  = try(node.nodename, null) 
       storage_pool = try(node.storage_pool, null) 
       mac          = try(node.mac, null) 
-      cores        = node.name == "talos-worker-01" ? 8 : 4
-      memory       = node.name == "talos-worker-01" ? 32768 : 16384
+      cores        = 6
+      memory       = 16384
       disk         = "200G"
-
-      talos_image  = node.nodename == "kirk" ? "factory.talos.dev/nocloud-installer/c1314b5868501a7629ed3acba25bd4201087fcbeb207347c5542b8110ed17e56:${local.factory_id}:${local.talos_version}" : "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
-      # This is specific to my setup where kirk has the GPU inside.
-      pci_devices = node.nodename == "kirk" ? [
-        {
-          device_map_name = "A580"
-          pcie  = true
-          rombar = true
-          primary = false # Keep novnc as main display.
-        }
-      ] : [] # Keep it empty for all other workers
+      talos_image  = "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
     }
   }
   all_nodes = merge(local.ctl_map, local.work_map)
@@ -345,7 +334,7 @@ resource "local_sensitive_file" "kubeconfig_yaml" {
   content  = replace(
     talos_cluster_kubeconfig.kubeconfig.kubeconfig_raw,
     "https://localhost:7445",
-    "https://${var.PUBLIC_IP_NODE}:6443"
+    "https://${var.K8SSERVICEHOST}:6443"
   )
   filename = "${path.module}/kubeconfig.yaml"
 }
@@ -381,7 +370,7 @@ EOF
 }
 
 data "http" "gateway_api_manifests" {
-  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/experimental-install.yaml"
+  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/experimental-install.yaml"
 }
 
 data "kubectl_file_documents" "gateway_crds" {
@@ -396,6 +385,10 @@ resource "kubectl_manifest" "gateway_api_crds" {
   depends_on = [null_resource.wait_for_api]
 }
 
+data "kubectl_file_documents" "cilium_configs" {
+  content = ${local.system_path}/cilium/ip-pool-announcements.yaml"
+}
+
 provider "helm" {
   kubernetes = {
     host                   = "https://${var.K8SSERVICEHOST}:6443"
@@ -405,23 +398,11 @@ provider "helm" {
   }
 }
 
-data "kubectl_file_documents" "cilium_configs" {
-  content = templatefile("${local.system_path}/cilium/cilium-ip-pools.yaml", {
-    public_ip = var.PUBLIC_IP_NODE
-  })
-}
-
-data "kubectl_file_documents" "gateway_manifest" {
-  content = templatefile("${local.system_path}/cilium/external-gateway.yaml", {
-    public_ip = var.PUBLIC_IP_NODE
-  })
-}
-
 resource "helm_release" "cilium" {
   name       = "cilium"
   repository = "https://helm.cilium.io/"
   chart      = "cilium"
-  version    = "1.19.4"
+  version    = "1.19.8"
   namespace  = "kube-system"
   
   wait          = false
@@ -430,7 +411,6 @@ resource "helm_release" "cilium" {
   
   values     = [file("${local.system_path}/cilium/cilium-values.yaml")]
   depends_on = [null_resource.wait_for_api, kubectl_manifest.gateway_api_crds]
-
 }
 
 # I had to add this in to ensure cilium was 100% up on all nodes... I am sure theres a better way but 5 mins is stable.
@@ -459,12 +439,6 @@ resource "kubectl_manifest" "cilium_resources" {
   for_each  = data.kubectl_file_documents.cilium_configs.manifests
   yaml_body = each.value
   depends_on = [time_sleep.wait_for_cilium_crds]
-}
-
-resource "kubectl_manifest" "cilium_gateways" {
-  for_each  = data.kubectl_file_documents.gateway_manifest.manifests
-  yaml_body = each.value
-  depends_on = [time_sleep.wait_for_cilium_crds] 
 }
 
 data "kubectl_file_documents" "longhorn_rbac_docs" {
@@ -506,7 +480,7 @@ resource "helm_release" "longhorn" {
 }
 
 resource "kubernetes_namespace_v1" "apps" {
-  for_each = toset(["coroot-system", "database-system", "cnpg-system"])
+  for_each = toset(["database-system"])
   metadata {
     name = each.value
   }
@@ -564,7 +538,7 @@ resource "kubernetes_secret_v1" "argocd_repo_creds" {
 }
 
 resource "kubectl_manifest" "argocd_root_app" {
-  yaml_body = file("${path.module}/../kubernetes/bootstrap/root-app.yaml")
+  yaml_body = file("${path.module}/../clusters/homelab-cluster/argocd/bootstrap/root-app.yaml")
   depends_on = [
     helm_release.argocd,
     kubernetes_secret_v1.argocd_repo_creds

@@ -4,7 +4,7 @@ metadata:
   name: local-pool
 spec:
   blocks:
-    - start: "192.168.2.201"
+    - start: "192.168.2.200"
       stop: "192.168.2.240"
 ---
 apiVersion: cilium.io/v2alpha1
