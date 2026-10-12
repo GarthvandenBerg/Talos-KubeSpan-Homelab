@@ -48,11 +48,6 @@ variable "GIT_PASS" {
   sensitive = true 
 }
 
-variable "PUBLIC_IP_NODE" {
-  type      = string
-  sensitive = true # Keeps your cloud VPS IP masked in CI/CD console outputs
-}
-
 variable "nb_key" {
   type      = string
   sensitive = true
@@ -88,9 +83,7 @@ provider "proxmox" {
 }
 
 locals {
-  node_data       = yamldecode(templatefile("${path.module}/nodes.yaml", {
-    public_ip = var.PUBLIC_IP_NODE
-  }))
+  node_data       = yamldecode(file("${path.module}/nodes.yaml"))
   system_path     = "${path.root}/../infrastructure/base"
   ctl_list        = [for n in local.node_data.nodes : n if n.type == "controlplane"]
   work_list       = [for n in local.node_data.nodes : n if n.type == "worker"]
@@ -298,6 +291,15 @@ resource "talos_machine_configuration_apply" "cp" {
   depends_on           = [proxmox_virtual_environment_vm.vm_instance]
   # Selects the pre-hashed configuration
   machine_configuration_input = each.value.platform == "proxmox" ? data.talos_machine_configuration.controlplane_proxmox.machine_configuration : data.talos_machine_configuration.controlplane_cloud.machine_configuration
+
+  config_patches = [
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "HostnameConfig"
+      hostname   = each.key
+      auto       = "off"
+    })
+  ]
 }
 
 resource "talos_machine_configuration_apply" "worker" {
@@ -306,6 +308,15 @@ resource "talos_machine_configuration_apply" "worker" {
   machine_configuration_input = data.talos_machine_configuration.worker.machine_configuration
   node                        = each.value.ip
   depends_on                  = [proxmox_virtual_environment_vm.vm_instance]
+
+  config_patches = [
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "HostnameConfig"
+      hostname   = each.key
+      auto       = "off"
+    })
+  ]
 }
 
 resource "talos_machine_bootstrap" "bootstrap" {
@@ -386,7 +397,7 @@ resource "kubectl_manifest" "gateway_api_crds" {
 }
 
 data "kubectl_file_documents" "cilium_configs" {
-  content = ${local.system_path}/cilium/ip-pool-announcements.yaml"
+  content = file("${local.system_path}/cilium/ip-pool-announcements.yaml")
 }
 
 provider "helm" {
