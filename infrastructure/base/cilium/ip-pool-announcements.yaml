@@ -12,11 +12,8 @@ kind: CiliumL2AnnouncementPolicy
 metadata:
   name: local-announcement
 spec:
-  nodeSelector:
-    matchLabels:
-      l2-announce: "true"
   interfaces:
-    - ".*"
+    - "^eth0$"
   externalIPs: true
   loadBalancerIPs: true
   serviceSelector: {}
