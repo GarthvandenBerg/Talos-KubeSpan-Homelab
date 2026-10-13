@@ -5,6 +5,7 @@ metadata:
   namespace: cfgate-system
   annotations:
     argocd.argoproj.io/sync-wave: "5"
+    cfgate.io/adopt-existing: "true"
 spec:
   tunnel:
     name: homelab-tunnel
