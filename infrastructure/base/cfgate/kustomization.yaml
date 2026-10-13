@@ -6,7 +6,7 @@ resources:
 helmCharts:
   - name: cfgate
     repo: oci://ghcr.io/cfgate/charts
-    version: 1.4.0
+    version: 1.10.0
     releaseName: cfgate
     namespace: cfgate-system
     includeCRDs: true
