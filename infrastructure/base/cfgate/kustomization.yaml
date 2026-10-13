@@ -4,6 +4,7 @@ resources:
   - ./cfgate-gateway.yaml
   - ./namespace.yaml
 
+helmCharts:
   - name: cfgate
     repo: oci://ghcr.io/cfgate/charts
     version: 1.10.0
