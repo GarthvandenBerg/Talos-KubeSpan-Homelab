@@ -24,6 +24,8 @@ spec:
   bootstrap:
     recovery:
       source: authentik-db
+      database: authentik
+      owner: authentik
 
   storage:
     size: 10Gi

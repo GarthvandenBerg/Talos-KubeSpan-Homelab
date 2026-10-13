@@ -21,6 +21,8 @@ spec:
   bootstrap:
     recovery:
       source: coroot-db
+      database: coroot
+      owner: coroot
 
   storage:
     size: 10Gi

@@ -30,6 +30,8 @@ spec:
   bootstrap:
     recovery:
       source: immich-db
+      database: immich
+      owner: immich
 
   storage:
     size: 20Gi
