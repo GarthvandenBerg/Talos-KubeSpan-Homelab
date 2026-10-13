@@ -1,0 +1,4 @@
+replicaCount: 2
+metrics:
+  service:
+    enabled: false
