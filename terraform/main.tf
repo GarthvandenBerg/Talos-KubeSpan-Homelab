@@ -35,7 +35,6 @@ variable "s3_pvc_bucket"{
 
 variable "K8SSERVICEHOST" { 
   type = string 
-  sensitive = true
 }
 
 variable "GIT_KEY" { 
@@ -46,11 +45,6 @@ variable "GIT_KEY" {
 variable "GIT_PASS" { 
   type      = string
   sensitive = true 
-}
-
-variable "nb_key" {
-  type      = string
-  sensitive = true
 }
 
 # --- Provider ---
@@ -229,7 +223,6 @@ data "talos_machine_configuration" "controlplane_cloud" {
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
-    templatefile("${path.module}/../.talos/patches/netbird-patch.yaml", { netbirdkey = var.nb_key }),
     yamlencode({
       machine = {
         install = {
@@ -251,7 +244,6 @@ data "talos_machine_configuration" "controlplane_proxmox" {
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
-    templatefile("${path.module}/../.talos/patches/netbird-patch.yaml", { netbirdkey = var.nb_key }),
     file("${path.module}/../.talos/patches/vip-patch.yaml"),
     yamlencode({
       machine = {
@@ -273,7 +265,6 @@ data "talos_machine_configuration" "worker" {
   config_patches   = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/worker-patch.yaml"),
-    templatefile("${path.module}/../.talos/patches/netbird-patch.yaml", { netbirdkey = var.nb_key }),
     yamlencode({
       machine = {
         install = {
