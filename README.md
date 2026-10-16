@@ -53,6 +53,22 @@ terraform output -raw kubeconfig > kubeconfig.yaml
 #### Get ArgoCD password
 ```kubectl -n argocd-system get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo```
 
+---
+
+### Cloudflared tunnel
+
+Because I haven't got openbao fully up I just manually push this to the cluster
+
+```
+read -rs CF_TOKEN   # paste the token, press Enter (nothing is echoed)
+
+kubectl create secret generic cloudflare-credentials \
+  --namespace cfgate-system \
+  --from-literal=CLOUDFLARE_API_TOKEN="$CF_TOKEN"
+
+unset CF_TOKEN
+```
+
 #### Sync waves:
  - 1 Operators
  - 2 DB's
