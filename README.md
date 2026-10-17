@@ -85,3 +85,50 @@ unset CF_TOKEN
  - Blog
  - DevContainers
  
+---
+### OpenBao / ESO
+
+1. Create OpenBao instance on your flavour of linux server
+
+2. Save your secrets somewhere safe
+
+3. Login to openbao
+
+4. ```bao secrets enable -path=secret kv-v2```
+
+5. Put a secret in (values live ONLY here)
+```
+bao kv put secret/staging/grafana \
+  admin-user=admin \
+  admin-password="$(openssl rand -base64 24)"
+```
+
+6. Read-only policy for ESO
+```
+bao policy write eso-read - <<'POL'
+path "secret/data/staging/*"     { capabilities = ["read"] }
+path "secret/metadata/staging/*" { capabilities = ["read", "list"] }
+POL
+```
+
+7. AppRole for ESO (optionally lock to your cluster node CIDR)
+```
+bao auth enable approle
+bao write auth/approle/role/eso \
+  token_policies=eso-read token_ttl=1h token_max_ttl=4h \
+  secret_id_ttl=0 \
+  token_bound_cidrs=192.168.2.0/24
+```
+
+8. Grab the IDs to put into cluster/manifest under `infrastructure/base/eso/clustersecretstore-openbao.yaml`
+```
+bao read -field=role_id auth/approle/role/eso/role-id  
+bao write -f -field=secret_id auth/approle/role/eso/secret-id 
+```
+
+9. Create namespace and put in your secret-id from the step above, if you expose this make a new one.
+
+```
+kubectl -n external-secrets create secret generic openbao-approle \
+  --from-literal=secret-id='<secret_id>'
+```

@@ -8,3 +8,4 @@ resources:
   - ./cnpg-operator
   - ./local-path
   - ./longhorn
+  - ./eso
