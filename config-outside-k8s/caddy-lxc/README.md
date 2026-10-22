@@ -8,18 +8,15 @@ mkdir -p /etc/caddy /var/lib/caddy /var/log/caddy
 chown -R caddy:caddy /etc/caddy /var/lib/caddy /var/log/caddy
 ```
 
-Create /etc/local.d/caddy.start:
+Create /etc/local.d/caddy.start
 
 ```
 vi /etc/local.d/caddy.start
 ```
 ```
 #!/bin/sh
-if [ -f /etc/cloudflare.cred ]; then
-    export $(grep -v '^#' /etc/cloudflare.cred | xargs)
-fi
 # Start Caddy in the background as the 'caddy' user
-su-exec caddy:caddy /usr/bin/caddy run --config /etc/caddy/Caddyfile > /var/log/caddy/caddy.log 2>&1 &
+su-exec caddy:caddy /usr/bin/caddy run --config /etc/caddy/Caddyfile --envfile /etc/cloudflare.cred > /var/log/caddy/caddy.log 2>&1 &
 ```
 Make it executable and enable the local boot service:
 ```
