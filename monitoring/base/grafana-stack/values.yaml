@@ -1,0 +1,85 @@
+# kube-prometheus-stack Helm values
+# Stack components deployed to grafana-system namespace
+
+# Talos Linux & Cilium specific overrides
+defaultRules:
+  create: true
+  rules:
+    kubeProxy: false
+    kubeScheduler: false
+    kubeControllerManager: false
+
+# Disabled as Talos manages control-plane via loopback/mTLS
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+# Disabled because Cilium operates with kubeProxyReplacement=true
+kubeProxy:
+  enabled: false
+
+# Prometheus Operator & Server
+prometheus:
+  enabled: true
+  prometheusSpec:
+    retention: 14d
+    retentionSize: 45GiB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+# Alertmanager configuration
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+# Grafana with External Secrets Operator + CloudNative-PG HA PostgreSQL
+grafana:
+  enabled: true
+
+  # Admin credentials provisioned by ESO from OpenBao into secret "grafana-admin"
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  # Database credentials injected from synced CNPG secret "grafana-db-app"
+  envValueFrom:
+    GF_DATABASE_PASSWORD:
+      secretKeyRef:
+        name: grafana-db-app
+        key: password
+    GF_DATABASE_USER:
+      secretKeyRef:
+        name: grafana-db-app
+        key: username
+
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+      serve_from_sub_path: false
+    database:
+      type: postgres
+      host: grafana-db-rw.database-system.svc.cluster.local:5432
+      name: grafana
+      user: grafana
+      ssl_mode: disable
+
+  # Stateless Grafana deployment since configuration & dashboards persist in PostgreSQL
+  persistence:
+    enabled: false

@@ -1,0 +1,61 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: grafana-db
+  namespace: database-system
+  annotations:
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  instances: 2
+
+  affinity:
+    podAntiAffinityType: required
+
+  managed:
+    roles:
+      - name: grafana
+        ensure: present
+        login: true
+        passwordSecret:
+          name: grafana-db-app
+
+  bootstrap:
+    recovery:
+      source: grafana-db
+      database: grafana
+      owner: grafana
+
+  storage:
+    size: 10Gi
+    storageClass: local-path
+
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://database-backup/grafana-db"
+      endpointURL: "http://192.168.70.100:9000"
+      s3Credentials:
+        accessKeyId:
+          name: s3-details
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: s3-details
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+
+  externalClusters:
+    - name: grafana-db
+      barmanObjectStore:
+        destinationPath: "s3://database-backup/grafana-db"
+        endpointURL: "http://192.168.70.100:9000"
+        wal:
+          maxParallel: 8
+        s3Credentials:
+          accessKeyId:
+            name: s3-details
+            key: AWS_ACCESS_KEY_ID
+          secretAccessKey:
+            name: s3-details
+            key: AWS_SECRET_ACCESS_KEY
