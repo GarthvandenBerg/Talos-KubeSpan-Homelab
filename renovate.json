@@ -3,11 +3,11 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard",
-    ":semanticCommits"
+    ":semanticCommits",
+    ":ignoreUnstable"
   ],
   "labels": ["renovate", "dependencies"],
   "timezone": "Africa/Johannesburg",
-  "schedule": ["every weekend"],
   "prHourlyLimit": 5,
   "prConcurrentLimit": 10,
   "kustomize": {
@@ -18,15 +18,25 @@
   },
   "packageRules": [
     {
-      "description": "Group minor and patch updates together",
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch"
+      "description": "Do NOT update Talos Linux or Talos Terraform providers - managed manually",
+      "matchPackagePatterns": [
+        "talos",
+        "siderolabs/talos",
+        "talosctl"
+      ],
+      "enabled": false
     },
     {
       "description": "Pin PostgreSQL to 16 for CloudNative-PG",
-      "matchPackageNames": ["ghcr.io/cloudnative-pg/postgresql"],
+      "matchPackageNames": [
+        "ghcr.io/cloudnative-pg/postgresql"
+      ],
       "allowedVersions": "<17.0.0"
+    },
+    {
+      "description": "Separate PRs for core infrastructure Helm charts",
+      "matchDatasources": ["helm"],
+      "groupName": null
     }
   ]
 }

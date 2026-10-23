@@ -20,7 +20,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: renovate
-              image: ghcr.io/renovatebot/renovate:39.191.0
+              image: ghcr.io/renovatebot/renovate:44.180.0
               env:
                 - name: RENOVATE_CONFIG_FILE
                   value: /opt/renovate/config.json
