@@ -1,7 +1,7 @@
 # 🏗️ Talos & KubeSpan Proxmox Homelab
 
 [![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.13.11-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.32-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.36-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 [![Cilium](https://img.shields.io/badge/CNI-Cilium_eBPF-brightgreen?logo=cilium&logoColor=white)](https://cilium.io/)
 [![Storage](https://img.shields.io/badge/Storage-Longhorn_%26_Local--Path-blueviolet)](https://longhorn.io/)
@@ -147,7 +147,7 @@ Storage workloads are partitioned based on performance and resilience requiremen
 Nodes are defined in [`terraform/nodes.yaml`]:
 
 | Node | Role | IP Address | Cores | RAM | Primary Disk |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `talos-ctl-1` | Control Plane | `192.168.2.10` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-2` | Control Plane | `192.168.2.11` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-3` | Control Plane | `192.168.2.12` | 4 vCPU | 6 GB | 50 GB |
@@ -182,7 +182,7 @@ cd terraform
 cp examplevars.tfvars terraform.tfvars
 
 # 2. Fill in Proxmox API, S3 endpoints, and GitHub tokens
-$EDITOR terraform.tfvars
+vi terraform.tfvars
 
 # 3. Initialize and provision
 terraform init
