@@ -16,6 +16,11 @@ kubeProxy:
 
 prometheus:
   enabled: true
+  service:
+    type: LoadBalancer
+    annotations:
+      lbipam.cilium.io/ips-pool: "local-pool"
+      lbipam.cilium.io/ips: "192.168.2.231"
   prometheusSpec:
     retention: 60d
     retentionSize: 45GiB
@@ -42,6 +47,12 @@ alertmanager:
 
 grafana:
   enabled: true
+
+  service:
+    type: LoadBalancer
+    annotations:
+      lbipam.cilium.io/ips-pool: "local-pool"
+      lbipam.cilium.io/ips: "192.168.2.230"
 
   admin:
     existingSecret: grafana-admin

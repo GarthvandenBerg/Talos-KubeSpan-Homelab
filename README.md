@@ -150,7 +150,7 @@ Storage workloads are partitioned based on performance and resilience requiremen
 Nodes are defined in [`terraform/nodes.yaml`]:
 
 | Node | Role | IP Address | Cores | RAM | Primary Disk |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `talos-ctl-1` | Control Plane | `192.168.2.10` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-2` | Control Plane | `192.168.2.11` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-3` | Control Plane | `192.168.2.12` | 4 vCPU | 6 GB | 50 GB |
@@ -305,7 +305,18 @@ flowchart LR
 
 ## 📊 Observability & Monitoring Stack
 
-The observability stack lives under [`monitoring/base/grafana-stack/`] and [`monitoring/base/coroot/`], I will transistion over to Grafana-stack only but I liked coroot so far and found it useful.
+The observability stack lives under [`monitoring/base/grafana-stack/`] and [`monitoring/base/coroot/`]. I will transition over to Grafana-stack only, but I liked coroot so far and found it useful.
+
+### Dedicated Service LoadBalancer IPs (Cilium IPAM)
+
+Services are allocated dedicated LAN IPs from the Cilium `local-pool` for direct homelab access:
+
+| Service | LoadBalancer IP | Port | Description |
+| :--- | :--- | :--- | :--- |
+| **ArgoCD** | `192.168.2.206` | `80` / `443` | GitOps UI & API |
+| **Grafana** | `192.168.2.230` | `80` | Dashboards & visualization |
+| **Prometheus** | `192.168.2.231` | `9090` | Prometheus server & query API |
+| **Local Gateway** | `192.168.2.240` | `80` / `443` | Cilium Gateway API ingress |
 
 ---
 
