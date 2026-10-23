@@ -37,8 +37,8 @@ A fully automated, declarative, production-grade Kubernetes homelab running on P
 
 ```mermaid
 flowchart TD
-    subgraph Proxmox["Proxmox Virtual Environment"]
-        subgraph TalosCluster["Talos Linux Cluster (KubeSpan Mesh)"]
+    subgraph Proxmox["Proxmox Virtual Environment (2 Nodes + QDevice)"]
+        subgraph TalosCluster["Talos Linux Cluster"]
             CP["Control Planes (talos-ctl-1..3)"]
             WK["Worker Nodes (talos-worker-1..2)"]
         end
@@ -61,7 +61,6 @@ flowchart TD
         PromGrafana["kube-prometheus-stack + Grafana"]
         Coroot["Coroot APM"]
         Immich["Immich (Photos + Vector)"]
-        Authentik["Authentik SSO"]
         Websites["Blog & Web Sites"]
         Renovate["Renovate Bot"]
     end
