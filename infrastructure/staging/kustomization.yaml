@@ -9,3 +9,4 @@ resources:
   - ./local-path
   - ./longhorn
   - ./eso
+  - ./renovate

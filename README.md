@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![OpenBao](https://img.shields.io/badge/Secrets-OpenBao_%2B_ESO-yellow)](https://openbao.org/)
 
-A fully automated, declarative, production-grade Kubernetes homelab running on Proxmox VE. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
+A fully automated, declarative, production-grade Kubernetes homelab running on Proxmox VE. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, interconnected with **KubeSpan**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
 
 ---
 
@@ -24,16 +24,11 @@ A fully automated, declarative, production-grade Kubernetes homelab running on P
   - [1. Terraform Infrastructure Provisioning](#1-terraform-infrastructure-provisioning)
   - [2. Kubeconfig & Cluster Access](#2-kubeconfig--cluster-access)
   - [3. ArgoCD Access & GitOps Handover](#3-argocd-access--gitops-handover)
-  - [4. Cloudflare Tunnel Credentials](#4-cloudflare-tunnel-credentials)
+  - [4. Cloudflare & Service Secrets Setup](#4-cloudflare--service-secrets-setup)
 - [Secrets Management (OpenBao + ESO)](#-secrets-management-openbao--eso)
 - [ArgoCD Sync Wave Architecture](#-argocd-sync-wave-architecture)
 - [Observability & Monitoring Stack](#-observability--monitoring-stack)
-  - [kube-prometheus-stack Helm Chart](#kube-prometheus-stack-helm-chart)
-  - [Grafana with CloudNative-PG PostgreSQL](#grafana-with-cloudnative-pg-postgresql)
-  - [Coroot APM](#coroot-apm)
 - [Database Management & Disaster Recovery](#-database-management--disaster-recovery)
-  - [CNPG Init vs Restore Workflow](#cnpg-init-vs-restore-workflow)
-  - [Scheduled S3 Backups](#scheduled-s3-backups)
 - [Roadmap & Future Plans](#-roadmap--future-plans)
 
 ---
@@ -43,7 +38,7 @@ A fully automated, declarative, production-grade Kubernetes homelab running on P
 ```mermaid
 flowchart TD
     subgraph Proxmox["Proxmox Virtual Environment"]
-        subgraph TalosCluster["Talos Linux Cluster"]
+        subgraph TalosCluster["Talos Linux Cluster (KubeSpan Mesh)"]
             CP["Control Planes (talos-ctl-1..3)"]
             WK["Worker Nodes (talos-worker-1..2)"]
         end
@@ -68,6 +63,7 @@ flowchart TD
         Immich["Immich (Photos + Vector)"]
         Authentik["Authentik SSO"]
         Websites["Blog & Web Sites"]
+        Renovate["Renovate Bot"]
     end
 
     subgraph ExternalServices["External Infrastructure"]
@@ -98,7 +94,7 @@ flowchart TD
 ```text
 Talos-KubeSpan-Homelab/
 ├── .talos/                      # Talos machine configuration patches
-│   └── patches/                 # VIP, KubeSpan (Not Implemented for now, all Local), NetBird, ctl, and worker patches
+│   └── patches/                 # VIP, KubeSpan, NetBird, ctl, and worker patches
 ├── terraform/                   # IaC bootstrap for Proxmox VMs & initial cluster setup
 │   ├── main.tf                  # Proxmox VMs, Talos bootstrap, Cilium, Longhorn, ArgoCD
 │   ├── nodes.yaml               # Cluster node inventory (IPs, MACs, roles, specs)
@@ -106,12 +102,13 @@ Talos-KubeSpan-Homelab/
 ├── infrastructure/              # Base infrastructure manifests & environment overlays
 │   ├── base/
 │   │   ├── argocd/              # ArgoCD Helm chart & kustomization
-│   │   ├── cfgate/              # Cloudflare Tunnel gateway definitions
+│   │   ├── cfgate/              # Cloudflare Tunnel gateway & ExternalSecret
 │   │   ├── cilium/              # Cilium Helm chart, IP pools, and Gateway API
 │   │   ├── cnpg-operator/       # CloudNative-PG Operator Helm chart
 │   │   ├── eso/                 # External Secrets Operator Helm chart & OpenBao store
 │   │   ├── local-path/          # Local-path provisioner for DB storage
-│   │   └── longhorn/            # Longhorn Helm chart, RBAC, and scheduling
+│   │   ├── longhorn/            # Longhorn Helm chart, RBAC, and scheduling
+│   │   └── renovate/            # Renovate Bot CronJob & ExternalSecret
 │   └── staging/                 # Staging environment overlay
 ├── apps/                        # Application workloads managed via GitOps
 │   ├── base/
@@ -150,7 +147,7 @@ Storage workloads are partitioned based on performance and resilience requiremen
 Nodes are defined in [`terraform/nodes.yaml`]:
 
 | Node | Role | IP Address | Cores | RAM | Primary Disk |
-| :--- | :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `talos-ctl-1` | Control Plane | `192.168.2.10` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-2` | Control Plane | `192.168.2.11` | 4 vCPU | 6 GB | 50 GB |
 | `talos-ctl-3` | Control Plane | `192.168.2.12` | 4 vCPU | 6 GB | 50 GB |
@@ -217,27 +214,13 @@ kubectl -n argocd-system get secret argocd-initial-admin-secret \
 
 Port-forward or access the ArgoCD web interface via its Cilium LoadBalancer IP (`192.168.2.206:80`, change this value in `infrastructure/base/argocd/argocd-values`).
 
-### 4. Cloudflare Tunnel Credentials
-
-Provision the Cloudflare tunnel credentials into the cluster (**Will add this into OpenBao, still testing with it**):
-
-```bash
-read -rs CF_TOKEN   # Paste token securely without terminal echo
-
-kubectl create secret generic cloudflare-credentials \
-  --namespace cfgate-system \
-  --from-literal=CLOUDFLARE_API_TOKEN="$CF_TOKEN"
-
-unset CF_TOKEN
-```
-
 ---
 
 ## 🔐 Secrets Management (OpenBao + ESO)
 
 This homelab follows GitOps best practices: **No plaintext secrets are ever committed to git.** Kubernetes `ExternalSecret` manifests act as pointers to secrets stored securely in OpenBao.
 
-### OpenBao Cluster Permissions and bootstrap
+### OpenBao Cluster Permissions and Bootstrap
 
 ```bash
 # 1. Enable the KV v2 secrets engine
@@ -248,13 +231,21 @@ bao kv put secret/staging/grafana \
   admin-user=admin \
   admin-password="$(openssl rand -base64 24)"
 
-# 3. Create a read-only policy for ESO
+# 3. Store Cloudflare Tunnel credentials
+bao kv put secret/staging/cloudflare \
+  token="<CLOUDFLARE_API_TOKEN>"
+
+# 4. Store Renovate Bot GitHub Token
+bao kv put secret/staging/renovate \
+  github-token="ghp_your_github_token"
+
+# 5. Create a read-only policy for ESO
 bao policy write eso-read - <<'POL'
 path "secret/data/staging/*"     { capabilities = ["read"] }
 path "secret/metadata/staging/*" { capabilities = ["read", "list"] }
 POL
 
-# 4. Enable and configure AppRole authentication
+# 6. Enable and configure AppRole authentication
 bao auth enable approle
 bao write auth/approle/role/eso \
   token_policies=eso-read \
@@ -263,17 +254,16 @@ bao write auth/approle/role/eso \
   secret_id_ttl=0 \
   token_bound_cidrs=192.168.2.0/24
 
-# 5. Extract Role ID and generate a Secret ID
+# 7. Extract Role ID and generate a Secret ID
 ROLE_ID=$(bao read -field=role_id auth/approle/role/eso/role-id)
 SECRET_ID=$(bao write -f -field=secret_id auth/approle/role/eso/secret-id)
 
-# 6. Inject the AppRole Secret ID into the external-secrets namespace
+# 8. Inject the AppRole Secret ID into the external-secrets namespace
 kubectl -n external-secrets create secret generic openbao-approle \
   --from-literal=secret-id="$SECRET_ID"
 ```
 
 Verify that [`infrastructure/base/eso/clustersecretstore-openbao.yaml`] has the matching `roleId`, if you completed the above do `echo $ROLE_ID`.
-
 
 ---
 
@@ -298,7 +288,7 @@ flowchart LR
 | **`1`** | Operators | CloudNative-PG, Longhorn, ESO | Installs Custom Resource Definitions and controller operators. |
 | **`2`** | Databases | CNPG `Cluster` | Provisions HA PostgreSQL clusters and initializes Barman S3 replication. |
 | **`3`** | Jobs to be completed before application runtime | `Job` | RBAC-scoped sync jobs copying generated CNPG app credentials to service namespaces. |
-| **`5`** | Workloads | Grafana, Prometheus, Authentik, Immich, Websites | Applications start up with database connectivity and secrets ready. |
+| **`5`** | Workloads | Grafana, Prometheus, Authentik, Immich, Websites, Renovate | Applications start up with database connectivity and secrets ready. |
 | **`10`** | Post-Sync | Housekeeping & validation | Post-application health verifications and backup verifications. |
 
 ---

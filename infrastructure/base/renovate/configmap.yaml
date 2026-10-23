@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: renovate-config
+  namespace: renovate-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+data:
+  config.json: |-
+    {
+      "platform": "github",
+      "repositories": [
+        "GarthvandenBerg/Talos-KubeSpan-Homelab"
+      ],
+      "onboarding": false,
+      "requireConfig": "optional",
+      "gitAuthor": "Renovate Bot <renovate@g-space.co.za>",
+      "prHourlyLimit": 5,
+      "prConcurrentLimit": 10,
+      "labels": ["dependencies", "renovate"]
+    }
