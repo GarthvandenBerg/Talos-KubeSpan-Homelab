@@ -18,13 +18,12 @@ spec:
     targetRevision: 0.13.4
     helm:
       values: |
-        image:
-          tag: v3.3.1
-
         controllers:
           main:
             containers:
               main:
+                image:
+                  tag: v3.3.5
                 env:
                   DB_HOSTNAME: immich-db-rw.database-system.svc.cluster.local
                   DB_USERNAME: immich
