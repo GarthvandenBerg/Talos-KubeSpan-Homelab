@@ -1,7 +1,3 @@
-# kube-prometheus-stack Helm values
-# Stack components deployed to grafana-system namespace
-
-# Talos Linux & Cilium specific overrides
 defaultRules:
   create: true
   rules:
@@ -9,22 +5,19 @@ defaultRules:
     kubeScheduler: false
     kubeControllerManager: false
 
-# Disabled as Talos manages control-plane via loopback/mTLS
 kubeControllerManager:
   enabled: false
 
 kubeScheduler:
   enabled: false
 
-# Disabled because Cilium operates with kubeProxyReplacement=true
 kubeProxy:
   enabled: false
 
-# Prometheus Operator & Server
 prometheus:
   enabled: true
   prometheusSpec:
-    retention: 14d
+    retention: 60d
     retentionSize: 45GiB
     storageSpec:
       volumeClaimTemplate:
@@ -35,7 +28,6 @@ prometheus:
             requests:
               storage: 50Gi
 
-# Alertmanager configuration
 alertmanager:
   enabled: true
   alertmanagerSpec:
@@ -48,17 +40,14 @@ alertmanager:
             requests:
               storage: 10Gi
 
-# Grafana with External Secrets Operator + CloudNative-PG HA PostgreSQL
 grafana:
   enabled: true
 
-  # Admin credentials provisioned by ESO from OpenBao into secret "grafana-admin"
   admin:
     existingSecret: grafana-admin
     userKey: admin-user
     passwordKey: admin-password
 
-  # Database credentials injected from synced CNPG secret "grafana-db-app"
   envValueFrom:
     GF_DATABASE_PASSWORD:
       secretKeyRef:
@@ -80,6 +69,5 @@ grafana:
       user: grafana
       ssl_mode: disable
 
-  # Stateless Grafana deployment since configuration & dashboards persist in PostgreSQL
   persistence:
     enabled: false

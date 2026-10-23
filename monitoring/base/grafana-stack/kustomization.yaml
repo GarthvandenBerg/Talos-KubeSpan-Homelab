@@ -4,14 +4,14 @@ kind: Kustomization
 resources:
   - ./namespace.yaml
   - ./grafana-admin-externalsecret.yaml
-  - ./grafana-db.yaml
-  - ./grafana-db-secret-sync.yaml
+  - ./grafana-db/grafana-db.yaml
+  - ./grafana-db/grafana-db-secret-sync.yaml
 
 helmCharts:
   - name: kube-prometheus-stack
     repo: https://prometheus-community.github.io/helm-charts
-    version: 69.8.2
+    version: 92.10.1
     releaseName: kube-prometheus-stack
     namespace: grafana-system
     includeCRDs: true
-    valuesFile: values.yaml
+    valuesFile: grafana-values.yaml
