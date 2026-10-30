@@ -10,7 +10,7 @@ resources:
 helmCharts:
   - name: kube-prometheus-stack
     repo: https://prometheus-community.github.io/helm-charts
-    version: 92.14.1
+    version: 92.16.1
     releaseName: kube-prometheus-stack
     namespace: grafana-system
     includeCRDs: true
