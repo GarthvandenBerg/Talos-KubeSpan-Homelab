@@ -35,7 +35,7 @@ spec:
   backup:
     barmanObjectStore:
       destinationPath : "s3://database-backup/immich-db"
-      endpointURL: "http://192.168.70.100:9000"
+      endpointURL: "https://s3back.g-space.co.za"
       s3Credentials:
         accessKeyId:
           name: s3-details
