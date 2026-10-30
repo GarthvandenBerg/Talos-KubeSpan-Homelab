@@ -60,7 +60,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "3.1.1"
+      version = "3.3.0"
     }
     kubectl = {
       source  = "gavinbunney/kubectl"
@@ -404,7 +404,7 @@ resource "helm_release" "cilium" {
   name       = "cilium"
   repository = "https://helm.cilium.io/"
   chart      = "cilium"
-  version    = "1.19.8"
+  version    = "1.20.4"
   namespace  = "kube-system"
   
   wait          = false
