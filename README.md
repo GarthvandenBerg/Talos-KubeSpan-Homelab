@@ -1,4 +1,4 @@
-# 🏗️ Talos & KubeSpan Proxmox Homelab
+# 🏗️ Talos Proxmox Homelab
 
 [![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.13.11-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.36-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![OpenBao](https://img.shields.io/badge/Secrets-OpenBao_%2B_ESO-yellow)](https://openbao.org/)
 
-A fully automated, declarative, production-grade Kubernetes homelab running on Proxmox VE. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, interconnected with **KubeSpan**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
+A fully automated, declarative, production-grade Kubernetes homelab running on Proxmox VE. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
 
 ---
 
@@ -93,7 +93,7 @@ flowchart TD
 ```text
 Talos-KubeSpan-Homelab/
 ├── .talos/                      # Talos machine configuration patches
-│   └── patches/                 # VIP, KubeSpan, NetBird, ctl, and worker patches
+│   └── patches/                 # VIP, NetBird, ctl, and worker patches
 ├── terraform/                   # IaC bootstrap for Proxmox VMs & initial cluster setup
 │   ├── main.tf                  # Proxmox VMs, Talos bootstrap, Cilium, Longhorn, ArgoCD
 │   ├── nodes.yaml               # Cluster node inventory (IPs, MACs, roles, specs)
