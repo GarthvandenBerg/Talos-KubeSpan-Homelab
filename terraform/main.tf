@@ -223,6 +223,7 @@ data "talos_machine_configuration" "controlplane_cloud" {
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
+    file("${path.module}/../.talos/patches/dns-patch.yaml"),
     yamlencode({
       machine = {
         install = {
@@ -245,6 +246,7 @@ data "talos_machine_configuration" "controlplane_proxmox" {
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
     file("${path.module}/../.talos/patches/vip-patch.yaml"),
+    file("${path.module}/../.talos/patches/dns-patch.yaml"),
     yamlencode({
       machine = {
         install = {
@@ -265,6 +267,7 @@ data "talos_machine_configuration" "worker" {
   config_patches   = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/worker-patch.yaml"),
+    file("${path.module}/../.talos/patches/dns-patch.yaml"),
     yamlencode({
       machine = {
         install = {
