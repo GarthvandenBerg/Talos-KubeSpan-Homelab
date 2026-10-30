@@ -251,7 +251,9 @@ bao write auth/approle/role/eso \
   token_ttl=1h \
   token_max_ttl=4h \
   secret_id_ttl=0 \
-  token_bound_cidrs=192.168.2.0/24
+  token_bound_cidrs=192.168.70.210,192.168.70.211,192.168.70.244
+
+#Caddy node IP's and the VIP for Caddy, or put your cluster CIDR like 192.168.0.0/24
 
 # 7. Extract Role ID and generate a Secret ID
 ROLE_ID=$(bao read -field=role_id auth/approle/role/eso/role-id)
