@@ -1,7 +1,7 @@
 # 🏗️ Talos Proxmox Homelab
 
-[![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.13.11-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.36-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.14.5-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.37.1-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 [![Cilium](https://img.shields.io/badge/CNI-Cilium_eBPF-brightgreen?logo=cilium&logoColor=white)](https://cilium.io/)
 [![Storage](https://img.shields.io/badge/Storage-Longhorn_%26_Local--Path-blueviolet)](https://longhorn.io/)
