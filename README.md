@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![OpenBao](https://img.shields.io/badge/Secrets-OpenBao_%2B_ESO-yellow)](https://openbao.org/)
 
-A fully automated, declarative, production-grade Kubernetes homelab running on Proxmox VE. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
+A fully automated, declarative, production-grade Kubernetes homelab running on multi node Proxmox VE cluster. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
 
 ---
 
@@ -340,7 +340,7 @@ Centralized in [`apps/base/backup/global-backup.yaml`]:
   - `00:00 UTC` - `coroot-db`
   - `00:10 UTC` - `immich-db`
   - `00:20 UTC` - `authentik-db`
-  - `01:00 UTC` - `grafana-db`
+  - `01:00 UTC` - `grafana-db` 
 
 ---
 
@@ -348,3 +348,6 @@ Centralized in [`apps/base/backup/global-backup.yaml`]:
 
 - [ ] **Talos In-Place Rolling Upgrades**: Test non-disruptive OS upgrades from Talos v1.12.x to v1.13.x, have a bash script for this.
 - [ ] **DevContainers**: Standardized development environments for homelab services.
+- [ ] **Put all secrets in OpenBao**: Currently I put some secrets into the cluster when the cluster is build, ideally this should just be the OpenBao secret so that ArgoCD, S3 backups etc can be pulled from OpenBao.
+- [ ] **Change DB's to use a single template file that gets overwritten with Kustomize for each DB**: I have many DB manifests but it would be easier to have a template that I use Kustomize to change with.
+- [ ] **Move away completely from Cilium IPAM LB IP's**: Use the Gateway API for any external access in the cluster, I have experimental CRDS anyways so TCP route works through the Gateway API.

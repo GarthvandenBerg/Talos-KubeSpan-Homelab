@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e 
+
+# I tried to do this but it wasn't working I am going start from scratch again, it worked to manually talosctl upgrade
+# the nodes but it also seemed like they needed a restart which is weird? Will need to play around here more...
+
+# talosctl upgrade -n 192.168.2.10 ....

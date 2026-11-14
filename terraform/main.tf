@@ -84,6 +84,7 @@ locals {
   cluster_name    = local.node_data.cluster_name
   factory_id      = local.node_data.factory_id
   talos_version   = local.node_data.talos_version
+  kube_version    = local.node_data.kube_version
   talos_image     = "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
 
   # Generate a map of the controlplanes and define disk, memory and CPU for them.
@@ -219,7 +220,7 @@ data "talos_machine_configuration" "controlplane_cloud" {
   machine_type       = "controlplane"
   machine_secrets    = talos_machine_secrets.machine_secrets.machine_secrets
   talos_version      = local.node_data.talos_version
-  kubernetes_version = "1.36.0"
+  kubernetes_version = local.node_data.kube_version
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
@@ -241,7 +242,7 @@ data "talos_machine_configuration" "controlplane_proxmox" {
   machine_type       = "controlplane"
   machine_secrets    = talos_machine_secrets.machine_secrets.machine_secrets
   talos_version      = local.node_data.talos_version
-  kubernetes_version = "1.36.0"
+  kubernetes_version = local.node_data.kube_version
   config_patches     = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/ctl-patch.yaml"),
@@ -258,12 +259,12 @@ data "talos_machine_configuration" "controlplane_proxmox" {
 }
 
 data "talos_machine_configuration" "worker" {
-  cluster_name     = local.cluster_name
-  cluster_endpoint = "https://localhost:7445"
-  machine_type     = "worker"
-  machine_secrets  = talos_machine_secrets.machine_secrets.machine_secrets
-  talos_version    = local.node_data.talos_version
-  kubernetes_version = "1.36.0"
+  cluster_name       = local.cluster_name
+  cluster_endpoint   = "https://localhost:7445"
+  machine_type       = "worker"
+  machine_secrets    = talos_machine_secrets.machine_secrets.machine_secrets
+  talos_version      = local.node_data.talos_version
+  kubernetes_version = local.node_data.kube_version
   config_patches   = [
     file("${path.module}/../.talos/patches/shared-patch.yaml"),
     file("${path.module}/../.talos/patches/worker-patch.yaml"),
@@ -375,7 +376,7 @@ EOF
 }
 
 data "http" "gateway_api_manifests" {
-  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/experimental-install.yaml"
+  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.7.0/experimental-install.yaml"
 }
 
 data "kubectl_file_documents" "gateway_crds" {
