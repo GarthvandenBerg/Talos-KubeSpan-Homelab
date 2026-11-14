@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![OpenBao](https://img.shields.io/badge/Secrets-OpenBao_%2B_ESO-yellow)](https://openbao.org/)
 
-A fully automated, declarative, production-grade Kubernetes homelab running on multi node Proxmox VE cluster. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
+A fully automated, declarative, production style Kubernetes homelab running on multi node Proxmox VE cluster. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
 
 ---
 
