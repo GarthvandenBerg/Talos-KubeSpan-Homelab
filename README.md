@@ -1,4 +1,4 @@
-# 🏗️ Talos Proxmox Homelab
+# Talos + Proxmox Kubernetes Homelab
 
 [![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.14.5-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.37.1-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
@@ -9,345 +9,382 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![OpenBao](https://img.shields.io/badge/Secrets-OpenBao_%2B_ESO-yellow)](https://openbao.org/)
 
-A fully automated, declarative, production style Kubernetes homelab running on multi node Proxmox VE cluster. Infrastructure is bootstrapped using **Terraform** and **Talos Linux**, networked with **Cilium (eBPF)**, backed by **Longhorn** and **Local-Path** storage, secured with **OpenBao** and **External Secrets Operator (ESO)**, and continuously reconciled via **ArgoCD (GitOps)**.
+A five-node Talos Linux Kubernetes cluster on a two-node Proxmox VE cluster. I built it to practise platform engineering end to end: Terraform provisioning, an immutable OS, eBPF networking, GitOps with ArgoCD, secrets kept out of Git, and database backups I can restore.
+
+**This is a learning environment that I operate with production habits. It is not a production system.** It is one site with one operator and no SLOs. The [Known limitations](#️-known-limitations) section sits near the top on purpose: I would rather you read my gaps from me than find them yourself.
+
+**Jump to:** [At a glance](#-at-a-glance) · [Architecture](#-architecture) · [Decisions](#-key-decisions) · [Limitations](#️-known-limitations) · [Backups & DR](#-backups--disaster-recovery) · [Bootstrap](#-bootstrap-guide) · [Roadmap](#-roadmap)
+
+> The repository is being renamed to `Talos-Proxmox-Homelab`. It was originally `Talos-KubeSpan-Homelab` from when one control-plane node lived in the cloud and used KubeSpan. All nodes are now local and KubeSpan is no longer used. Private access is handled by NetBird (see [Networking and exposure](#-networking-and-exposure)).
 
 ---
 
-## 📑 Table of Contents
+## 📌 At a glance
 
-- [Architecture Overview](#-architecture-overview)
-- [Repository Structure](#-repository-structure)
-- [Storage Strategy](#-storage-strategy)
-- [Node Topology & Hardware](#-node-topology--hardware)
-- [Prerequisites](#-prerequisites)
-- [Bootstrap & Deployment Guide](#-bootstrap--deployment-guide)
-  - [1. Terraform Infrastructure Provisioning](#1-terraform-infrastructure-provisioning)
-  - [2. Kubeconfig & Cluster Access](#2-kubeconfig--cluster-access)
-  - [3. ArgoCD Access & GitOps Handover](#3-argocd-access--gitops-handover)
-  - [4. Cloudflare & Service Secrets Setup](#4-cloudflare--service-secrets-setup)
-- [Secrets Management (OpenBao + ESO)](#-secrets-management-openbao--eso)
-- [ArgoCD Sync Wave Architecture](#-argocd-sync-wave-architecture)
-- [Observability & Monitoring Stack](#-observability--monitoring-stack)
-- [Database Management & Disaster Recovery](#-database-management--disaster-recovery)
-- [Roadmap & Future Plans](#-roadmap--future-plans)
+| | |
+| :--- | :--- |
+| **Cluster** | 3 control planes + 2 workers on 2 Proxmox nodes + a QDevice. Versions are in the badges above. |
+| **Environments** | One cluster. The `staging` overlay is what runs today. A `production` overlay exists but is **not deployed**. The plan is to shrink this cluster to a single control plane as a test bed and build a separate production cluster from the same layout. |
+| **GitOps** | ArgoCD app-of-apps, Kustomize overlays, sync policy auto / selfHeal / prune |
+| **Databases** | One CloudNative-PG cluster per app that needs Postgres. WAL and base backups go to MinIO (S3) on my TrueNAS. |
+| **Secrets** | OpenBao (outside the cluster) → External Secrets Operator → Kubernetes Secrets. No plaintext secrets in Git. |
+| **Networking** | Cilium (kube-proxy replacement, Gateway API, LB IPAM). Public websites via Cloudflare Tunnel (CFGate). Private apps via NetBird. No inbound ports are open. |
+| **Workloads** | Immich (the only app used by friends and family), personal websites, Minecraft, Authentik, Renovate, Prometheus/Grafana, Coroot |
+| **Restore drills** | Full cluster rebuild from Terraform + Git with databases restored from S3 (October 2026). Not every layer has been drilled. See [Backups & DR](#-backups--disaster-recovery) and the [DR plan](docs/disaster-recovery.md). |
 
 ---
 
-## 🏛 Architecture Overview
+## 🏛 Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Proxmox["Proxmox Virtual Environment (2 Nodes + QDevice)"]
-        subgraph TalosCluster["Talos Linux Cluster"]
-            CP["Control Planes (talos-ctl-1..3)"]
-            WK["Worker Nodes (talos-worker-1..2)"]
+    subgraph Proxmox["Proxmox VE (2 nodes + QDevice)"]
+        subgraph TalosCluster["Talos Linux cluster"]
+            CP["Control planes (talos-ctl-1..3)"]
+            WK["Workers (talos-worker-1..2)"]
         end
     end
 
-    subgraph CoreInfra["Core Infrastructure Layer (Terraform & Helm)"]
-        Cilium["Cilium CNI (eBPF, Gateway API, kube-proxy replacement)"]
-        Longhorn["Longhorn HA Storage"]
-        LocalPath["Local-Path Storage (High IOPS for DBs)"]
-        ArgoCD["ArgoCD GitOps Engine"]
+    subgraph CoreInfra["Bootstrap layer (Terraform)"]
+        Cilium["Cilium (eBPF, Gateway API, kube-proxy replacement)"]
+        Longhorn["Longhorn (installed, no workloads bound yet)"]
+        LocalPath["local-path (node-local, for databases)"]
+        ArgoCD["ArgoCD"]
     end
 
-    subgraph GitOpsLayer["GitOps Reconciliation (ArgoCD Root App)"]
+    subgraph GitOpsLayer["GitOps layer (ArgoCD root app)"]
         ESO["External Secrets Operator"]
-        CNPG["CloudNative-PG Operator"]
-        CFGate["Cloudflare Gateway / Tunnel"]
+        CNPG["CloudNative-PG operator"]
+        CFGate["Cloudflare Tunnel / Gateway"]
     end
 
-    subgraph Workloads["Application & Monitoring Workloads"]
+    subgraph Workloads["Applications & monitoring"]
         PromGrafana["kube-prometheus-stack + Grafana"]
-        Coroot["Coroot APM"]
-        Immich["Immich (Photos + Vector)"]
-        Websites["Blog & Web Sites"]
-        Renovate["Renovate Bot"]
+        Coroot["Coroot"]
+        Immich["Immich"]
+        Websites["Personal websites"]
+        Renovate["Renovate"]
     end
 
-    subgraph ExternalServices["External Infrastructure"]
-        OpenBao["OpenBao (Vault Secrets)"]
-        MinIO["MinIO S3 (Backups: PVCs & DBs)"]
-        Cloudflare["Cloudflare Edge"]
+    subgraph Outside["Outside the cluster"]
+        OpenBao["OpenBao (own VM)"]
+        TrueNAS["TrueNAS: MinIO S3 (DB backups) + NFS (Immich data)"]
+        Cloudflare["Cloudflare edge"]
+        NetBird["NetBird (private access)"]
     end
 
     Proxmox --> TalosCluster
     TalosCluster --> CoreInfra
     CoreInfra --> GitOpsLayer
     GitOpsLayer --> Workloads
-    OpenBao -.->|AppRole / Sync| ESO
-    Workloads -.->|WAL & Daily Backups| MinIO
-    Cloudflare -.->|Tunnels| CFGate
+    OpenBao -.->|AppRole| ESO
+    Workloads -.->|DB backups| TrueNAS
+    Cloudflare -.->|tunnel| CFGate
+    NetBird -.->|private access| Workloads
 ```
 
-### Design Principles
-- **Immutable OS**: Talos Linux provides a minimal, API-driven, security-hardened Linux kernel with zero SSH access.
-- **GitOps Driven**: All manifests live declaratively in git. ArgoCD continuously syncs configuration from the `HEAD` of this repository.
-- **Zero Secrets in Git**: Secrets are stored in OpenBao. External Secrets Operator (ESO) syncs Kubernetes Secrets dynamically at deploy time.
-- **High Availability & Separation of Concerns**: Clustered control planes and multi-replica worker nodes, dedicated local storage for relational databases, and distributed storage for dynamic stateful workloads.
+**Two layers by design.** Terraform builds only what ArgoCD needs before it can take over: VMs, Talos, Cilium, ArgoCD (Longhorn is also installed here). Everything after that is reconciled from Git.
+
+### Design principles
+
+- **Immutable OS.** Talos has no SSH and no shell. Node configuration is an API call, defined in `.talos/patches`.
+- **Git is the source of truth.** ArgoCD reconciles the cluster from this repo.
+- **No application secrets in Git.** `ExternalSecret` manifests are pointers and the values live in OpenBao. A few bootstrap credentials are the exception (see [limitations](#️-known-limitations)).
+- **Match storage to failure model.** Databases replicate at the application layer (CNPG), so they get fast node-local disks and don't pay for replication twice.
+- **Rebuild over repair.** For the cluster itself I prefer rebuilding from code to restoring etcd, and I keep durable state (databases, secrets, personal data) outside the cluster. This trade-off is explained in the [DR plan](docs/disaster-recovery.md#decision-etcd-is-not-backed-up).
 
 ---
 
-## 📂 Repository Structure
+## 🧭 Key decisions
+
+| Decision | Chosen | Alternative considered | Why | Trade-off I accepted |
+| :--- | :--- | :--- | :--- | :--- |
+| OS | Talos Linux | Ubuntu + kubeadm / k3s | Immutable, API-driven, minimal attack surface, config as data | Harder to debug; no SSH |
+| CNI | Cilium (eBPF) | Flannel / Calico | kube-proxy replacement, Gateway API, LB IPAM, path to network policy and flow visibility | More moving parts; no policies written yet |
+| DB storage | `local-path` + CNPG | Longhorn for DBs | CNPG already replicates, so this avoids replication-on-replication and extra write load, and gives higher IOPS | Each instance's data is pinned to one node's disk |
+| General storage | Longhorn (installed, unused today) | NFS / Ceph | Replicated block storage with snapshots and S3 backups, for when I have stateful apps that need it | Only 2 workers, so at most 2 replicas |
+| Large media storage | NFS from TrueNAS (ZFS) | Longhorn | Immich needs a lot of capacity, and ZFS already gives snapshots and replication | TrueNAS is a single point of failure for Immich data |
+| Secrets | OpenBao + ESO | Sealed Secrets / SOPS | One central store outside the cluster, so secrets survive a cluster rebuild and aren't encrypted-in-Git | OpenBao is a dependency I also operate and must back up |
+| GitOps | ArgoCD app-of-apps + sync waves | Flux | UI for seeing sync state and diffs while learning; widely used | Sync-wave ordering needs care (see below) |
+| Public ingress | Cloudflare Tunnel + Gateway API | Port-forward + reverse proxy | No inbound ports opened on my network | Cloudflare is in the trust path |
+| Private access | NetBird (WireGuard mesh) + Caddy | Public ingress with auth | Friends and family reach Immich over a private mesh instead of the internet | Users must install a client |
+| Bootstrap | Terraform up to ArgoCD, then hand over | Everything in Terraform | One tool owns each layer | Two sources of truth to keep consistent |
+| Cluster backup | No etcd snapshots; rebuild from code | Scheduled `talosctl etcd snapshot` | Nothing in etcd is irreplaceable: manifests are in Git, data is in S3 and OpenBao | Slower recovery from partial control-plane loss. Revisit if that matters. |
+
+---
+
+## ⚠️ Known limitations
+
+I would not run this for other people yet. Here are the gaps, why they exist and what I plan to do about them.
+
+### Security
+
+| Limitation | Impact | Plan |
+| :--- | :--- | :--- |
+| **No network policies.** Cilium is installed but I have not written any `NetworkPolicy` / `CiliumNetworkPolicy`. The pod network is flat. | Any pod can reach any other pod, including PostgreSQL. A compromised workload could move laterally. Exposure is limited because nothing is port-forwarded and public traffic comes only through the Cloudflare Tunnel. | Observe flows with Hubble first, then default-deny the database and secrets namespaces, then expand outward. |
+| **Terraform state is unencrypted.** It is stored on my NAS and contains bootstrap credentials (ArgoCD repo access, S3 keys) and Talos secrets. | Anyone who can read the NAS path can read those secrets. | Move to OpenTofu and use its native state encryption. Reduce the bootstrap secret set to the OpenBao AppRole only. |
+| **ESO's AppRole `secret_id` never expires** (`secret_id_ttl=0`) and was created by hand. | A leaked secret ID stays valid until I revoke it. No rotation process exists. | TTL-bound secret ID with a rotation job. The token is already restricted by CIDR. |
+| **OpenBao is configured by hand.** The `bao` commands below are not code. | Policies and auth config are not reviewable in Git and could drift. | Codify them with the Vault provider (OpenTofu/Terraform). |
+| **Gateway API uses experimental-channel CRDs** (for TCPRoute). | APIs may change between releases and break routes on upgrade. | Move to standard-channel resources when TCPRoute graduates. |
+| **Public surface is small but not audited.** Only the personal websites are exposed, through Cloudflare Tunnel. | A tunnel misconfiguration would expose the website namespace. | Review the exposed routes and the Authentik coverage; add a short exposure checklist. |
+
+### Reliability
+
+| Limitation | Impact | Plan |
+| :--- | :--- | :--- |
+| **Two Proxmox hosts + QDevice.** Three control planes cannot spread evenly across two hosts, so one host carries two of them. | Losing that host loses etcd quorum and the API server. Workloads keep running; changes stop. Because I don't snapshot etcd, recovery means a full rebuild. | Documented in the [DR plan](docs/disaster-recovery.md). Consider a third small host. |
+| **Longhorn is capped at two replicas** (two workers). Nothing uses it today. | A volume with one surviving replica is degraded and has no spare node to rebuild onto. | Add a worker, or accept the limit for the few volumes that need it. |
+| **Database data lives on node-local disks.** Failover is handled by CNPG replicas. | A node loss without a healthy replica means recovery from S3 backup instead of failover. | Run 2 instances for databases that matter. Only 2 workers are available, so 3 instances cannot be spread. |
+| **Backup location.** MinIO runs as a container on my main TrueNAS, in a zvol on the same zpool as my personal data. | Cluster backups share a failure domain with the NAS. Personal data has off-site copies; the MinIO bucket data does not yet. | Replicate the MinIO data to the off-site NAS and B2. |
+| **Not every restore is drilled.** The off-site NAS replica has not been restored, and OpenBao restore has not been timed. | An untested backup is an assumption. | Run the drills in the [DR plan](docs/disaster-recovery.md#drill-program) and record the timings. |
+| **No alerting.** Prometheus and Grafana run in-cluster and nothing notifies me. If a Proxmox host dies, I find out by looking. | I learn about problems late, and a dead cluster cannot alert on itself. | Alertmanager to a push channel plus an external dead-man switch (healthchecks.io on the Watchdog alert). |
+
+### Operations
+
+| Limitation | Impact | Plan |
+| :--- | :--- | :--- |
+| **Single operator.** | Bus factor of one. | This README, the runbooks and Git history. |
+| **One cluster, two overlays.** `production` is prepared but not deployed. | Today there is no isolated production environment. | Rebuild a separate production cluster from this layout once staging has been exercised. |
+| **Upgrades are scripted but not rehearsed end to end.** | Upgrade risk is untested. | Rehearse on a rebuilt cluster and record steps and timings. |
+| **No SLOs or tracing.** Coroot provides basic SLO views and a service map. | I can see that something is slow, but not for whom. | Define SLOs for the one or two services that matter. |
+| **No manifest validation in CI.** | Bad manifests are caught at sync time. | Add `kustomize build` / `kubeconform` / `terraform validate` on pull requests. |
+| **Renovate opens update PRs.** I review and merge them manually. | Updates are as current as my attention. | Consider auto-merge for patch updates once CI validation exists. |
+
+---
+
+## 📂 Repository structure
 
 ```text
-Talos-KubeSpan-Homelab/
-├── .talos/                      # Talos machine configuration patches
-│   └── patches/                 # VIP, NetBird, ctl, and worker patches
-├── terraform/                   # IaC bootstrap for Proxmox VMs & initial cluster setup
-│   ├── main.tf                  # Proxmox VMs, Talos bootstrap, Cilium, Longhorn, ArgoCD
-│   ├── nodes.yaml               # Cluster node inventory (IPs, MACs, roles, specs)
-│   └── examplevars.tfvars       # Template variable file
-├── infrastructure/              # Base infrastructure manifests & environment overlays
-│   ├── base/
-│   │   ├── argocd/              # ArgoCD Helm chart & kustomization
-│   │   ├── cfgate/              # Cloudflare Tunnel gateway & ExternalSecret
-│   │   ├── cilium/              # Cilium Helm chart, IP pools, and Gateway API
-│   │   ├── cnpg-operator/       # CloudNative-PG Operator Helm chart
-│   │   ├── eso/                 # External Secrets Operator Helm chart & OpenBao store
-│   │   ├── local-path/          # Local-path provisioner for DB storage
-│   │   ├── longhorn/            # Longhorn Helm chart, RBAC, and scheduling
-│   │   └── renovate/            # Renovate Bot CronJob & ExternalSecret
-│   └── staging/                 # Staging environment overlay
-├── apps/                        # Application workloads managed via GitOps
-│   ├── base/
-│   │   ├── authentik/           # Authentik SSO & PostgreSQL CNPG Cluster
-│   │   ├── backup/              # Global ScheduledBackup & Longhorn RecurringJobs
-│   │   ├── blog-site/           # Personal blog & HTTPRoute
-│   │   ├── ggprohn/             # Personal website & HTTPRoute
-│   │   ├── immich/              # Immich Photo server + pgvector CNPG Cluster
-│   │   └── minecraft-server/    # Dedicated game server
-│   └── staging/                 # Staging application overlay
-├── monitoring/                  # Observability and metrics stack
-│   ├── base/
-│   │   ├── coroot/              # Coroot eBPF collector and Coroot-db CNPG cluster
-│   │   └── grafana-stack/       # kube-prometheus-stack, Grafana, & CNPG grafana-db
-│   └── staging/                 # Staging monitoring overlay
-└── clusters/                    # ArgoCD root application bootstrapping
-    └── homelab-cluster/
-        └── argocd/bootstrap/    # root-app.yaml (App-of-Apps)
+Talos-Proxmox-Homelab/
+├── .talos/                      # Talos machine config patches (VIP, NetBird, control plane, worker)
+├── terraform/                   # Proxmox VMs, Talos bootstrap, Cilium, Longhorn, ArgoCD
+│   ├── main.tf
+│   ├── nodes.yaml               # Node inventory (IPs, MACs, roles, sizes)
+│   └── examplevars.tfvars       # Variable template
+├── infrastructure/              # Cluster-wide components
+│   ├── base/                    # argocd, cfgate, cilium, cnpg-operator, eso, local-path, longhorn, renovate
+│   ├── staging/                 # Overlay (deployed)
+│   └── production/              # Overlay (prepared, not deployed)
+├── apps/                        # Workloads
+│   ├── base/                    # authentik, backup, blog-site, ggprohn, immich, minecraft-server
+│   ├── staging/
+│   └── production/
+├── monitoring/                  # kube-prometheus-stack, Grafana, Coroot (+ their CNPG clusters)
+│   ├── base/                    # authentik, backup, blog-site, ggprohn, immich, minecraft-server
+│   ├── staging/
+│   └── production/
+├── clusters/                    # ArgoCD root application (app-of-apps)
+│   └── homelab-cluster/argocd/bootstrap/root-app.yaml
+├── config-outside-k8s/          # Configuration for components that run outside the cluster, Caddy and OpenBao
+└── docs/
+    └── disaster-recovery.md     # DR plan, runbooks and drill log
 ```
 
 ---
 
-## 💾 Storage Strategy
+## 🌐 Networking and exposure
 
-Storage workloads are partitioned based on performance and resilience requirements:
+| Path | Used for | Notes |
+| :--- | :--- | :--- |
+| **Cloudflare Tunnel + CFGate** | My public websites only | No inbound ports opened on my network |
+| **NetBird (WireGuard mesh) + Caddy** | Private apps for me, friends and family (Immich) | Caddy issues certificates with Cloudflare DNS-01. Internal DNS is resolved by a Technitium DNS cluster. |
+| **LAN / VLANs** | Management, Proxmox, TrueNAS | NetBird exit nodes on my home network give me access to the LAN and VLANs remotely |
 
-| Storage Class | Backing Engine | Primary Use Case | Target Workloads |
+---
+
+## 💾 Storage strategy
+
+| Storage class | Backing | Use | Workloads |
 | :--- | :--- | :--- | :--- |
-| **`local-path`** | Local Node NVMe/SSD | High IOPS, low-latency relational databases where clustering/replication is handled natively by the application operator. | **CloudNative-PG** |
-| **`longhorn`** | Distributed Block Storage | Resilient multi-replica shared storage with snapshotting and automated S3 backups. | **Prometheus**, **Alertmanager**, Immich media PVCs, stateful workloads |
+| `local-path` | Node-local disk | Low-latency disks for databases that replicate at the application layer | CloudNative-PG |
+| `longhorn` | Replicated block storage | Snapshots and S3 backups for stateful workloads that need them | Installed. No production workloads are bound to it yet. |
+| NFS | TrueNAS-Scale ZFS pool | Large shared data | Immich |
+
+## 🖥 Node topology
+
+| Node | Role | IP | vCPU | RAM | Disk |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| `talos-ctl-1` | Control plane | `192.168.2.10` | 4 | 6 GB | 50 GB |
+| `talos-ctl-2` | Control plane | `192.168.2.11` | 2 | 5 GB | 50 GB |
+| `talos-ctl-3` | Control plane | `192.168.2.12` | 2 | 5 GB | 50 GB |
+| `talos-worker-1` | Worker | `192.168.2.20` | 6 | 16 GB | 200 GB |
+| `talos-worker-2` | Worker | `192.168.2.21` | 4 | 10 GB | 200 GB |
 
 ---
 
-## 🖥 Node Topology & Hardware
+## 🌊 ArgoCD sync waves
 
-Nodes are defined in [`terraform/nodes.yaml`]:
+Waves enforce dependency order so nothing starts before its namespace, operator, secrets or database exist. CRDs must exist before any resource that uses them, so the operators install before the `ExternalSecret` and `Cluster` resources.
 
-| Node | Role | IP Address | Cores | RAM | Primary Disk |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `talos-ctl-1` | Control Plane | `192.168.2.10` | 4 vCPU | 6 GB | 50 GB |
-| `talos-ctl-2` | Control Plane | `192.168.2.11` | 4 vCPU | 6 GB | 50 GB |
-| `talos-ctl-3` | Control Plane | `192.168.2.12` | 4 vCPU | 6 GB | 50 GB |
-| `talos-worker-1` | Worker | `192.168.2.20` | 6 vCPU | 16 GB | 200 GB |
-| `talos-worker-2` | Worker | `192.168.2.21` | 6 vCPU | 16 GB | 200 GB |
-
----
-
-## 📋 Prerequisites
-
-Before bootstrapping the cluster, ensure the following are available:
-1. **Proxmox VE Cluster**: Running Proxmox VE with API token permissions to create VMs and allocate disks on the designated storage pool (e.g. `ssd-pool`).
-2. **MinIO / S3 Object Store**: S3-compatible bucket for backups:
-   - `s3://database-backup` (PostgreSQL WAL archiving & CNPG base backups)
-   - `s3://pvc-store` / `s3://pvc-backup` (Longhorn snapshots & volume backups)
-3. **OpenBao / HashiCorp Vault**: External Vault server configured with AppRole authentication.
-4. **GitHub PAT**: Token with repository read access for ArgoCD private repo synchronization.
-5. **Tools**: `terraform`, `talosctl`, and `kubectl`.
-
----
-
-## 🚀 Bootstrap & Deployment Guide
-
-### 1. Terraform Infrastructure Provisioning
-
-Terraform provisions the Proxmox VMs, installs Talos Linux, bootstraps etcd, and initializes core networking (Cilium) and storage (Longhorn) before handing off to ArgoCD.
-
-```bash
-cd terraform
-
-# 1. Create your variables file from the template
-cp examplevars.tfvars terraform.tfvars
-
-# 2. Fill in Proxmox API, S3 endpoints, and GitHub tokens
-vi terraform.tfvars
-
-# 3. Initialize and provision
-terraform init
-terraform apply
+```mermaid
+flowchart LR
+    W10["-10<br/>Namespaces"] --> W8["-8<br/>Operators + CRDs"]
+    W8 --> W6["-6<br/>ClusterSecretStore"]
+    W6 --> W5["-5<br/>ExternalSecrets"]
+    W5 --> W2["2<br/>CNPG clusters"]
+    W2 --> W3["3<br/>Credential-sync Jobs"]
+    W3 --> W5A["5<br/>Applications"]
+    W5A --> W10P["10<br/>Post-deploy"]
 ```
 
-### 2. Kubeconfig & Cluster Access
+| Wave | Resources | Purpose |
+| :---: | :--- | :--- |
+| `-10` | Namespaces | Exist before anything lands in them |
+| `-8` | Operators (ESO, CNPG) | CRDs and controllers installed |
+| `-6` | `ClusterSecretStore` | Connection to OpenBao, needs the ESO webhook ready |
+| `-5` | ExternalSecrets | Secrets are synced before pods need them |
+| `2` | CNPG `Cluster` | Databases provisioned, S3 archiving configured |
+| `3` | Jobs | Copy generated CNPG credentials into app namespaces |
+| `5` | Applications | Start with DB and secrets ready |
+| `10` | Post-sync | Validation / verification jobs |
 
-Once Terraform completes the bootstrap, export your cluster kubeconfig:
-
-```bash
-terraform output -raw kubeconfig > kubeconfig.yaml
-export KUBECONFIG="$(pwd)/kubeconfig.yaml"
-
-# Verify cluster connectivity
-kubectl get nodes -o wide
-```
-
-### 3. ArgoCD Access & GitOps Handover
-
-ArgoCD is installed during the Terraform bootstrap and automatically reconciles the root application [`clusters/homelab-cluster/argocd/bootstrap/root-app.yaml`].
-
-Retrieve the initial ArgoCD admin password:
-
-```bash
-kubectl -n argocd-system get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d; echo
-```
-
-Port-forward or access the ArgoCD web interface via its Cilium LoadBalancer IP (`192.168.2.206:80`, change this value in `infrastructure/base/argocd/argocd-values`).
+Sync waves order resources **within one Application**. Across Applications in the app-of-apps pattern, ordering depends on the wave annotations on the child `Application` resources in the root app and on ArgoCD's health assessment of them.
 
 ---
 
-## 🔐 Secrets Management (OpenBao + ESO)
+## 🔐 Secrets management
 
-This homelab follows GitOps best practices: **No plaintext secrets are ever committed to git.** Kubernetes `ExternalSecret` manifests act as pointers to secrets stored securely in OpenBao.
+`ExternalSecret` manifests in Git point at paths in OpenBao. ESO authenticates with AppRole and writes Kubernetes Secrets at deploy time. The AppRole policy is read-only and scoped to `secret/data/staging/*`.
 
-### OpenBao Cluster Permissions and Bootstrap
+**OpenBao runs on its own VM outside the cluster.** It is backed up with Proxmox Backup Server (whole VM) and a cron job that takes Raft snapshots. Restore steps are in the [DR plan](docs/disaster-recovery.md#s6-openbao-lost).
+
+<details>
+<summary>OpenBao bootstrap commands</summary>
 
 ```bash
-# 1. Enable the KV v2 secrets engine
+# 1. Enable KV v2
 bao secrets enable -path=secret kv-v2
 
-# 2. Store Grafana credentials
-bao kv put secret/staging/grafana \
-  admin-user=admin \
-  admin-password="$(openssl rand -base64 24)"
+# 2. Seed secrets
+bao kv put secret/staging/grafana admin-user=admin admin-password="$(openssl rand -base64 24)"
+bao kv put secret/staging/cloudflare token="<CLOUDFLARE_TOKEN>"
+bao kv put secret/staging/renovate github-token="<GITHUB_TOKEN>"
 
-# 3. Store Cloudflare Tunnel credentials
-bao kv put secret/staging/cloudflare \
-  token="<CLOUDFLARE_API_TOKEN>"
-
-# 4. Store Renovate Bot GitHub Token
-bao kv put secret/staging/renovate \
-  github-token="ghp_your_github_token"
-
-# 5. Create a read-only policy for ESO
+# 3. Read-only policy for ESO
 bao policy write eso-read - <<'POL'
 path "secret/data/staging/*"     { capabilities = ["read"] }
 path "secret/metadata/staging/*" { capabilities = ["read", "list"] }
 POL
 
-# 6. Enable and configure AppRole authentication
+# 4. AppRole (restrict token use to your cluster's node CIDR)
 bao auth enable approle
 bao write auth/approle/role/eso \
   token_policies=eso-read \
   token_ttl=1h \
   token_max_ttl=4h \
   secret_id_ttl=0 \
-  token_bound_cidrs=192.168.70.210,192.168.70.211,192.168.70.244
+  token_bound_cidrs=<CLUSTER_NODE_CIDR>
 
-#Caddy node IP's and the VIP for Caddy, or put your cluster CIDR like 192.168.0.0/24
-
-# 7. Extract Role ID and generate a Secret ID
+# 5. Generate credentials and give the secret ID to the cluster
 ROLE_ID=$(bao read -field=role_id auth/approle/role/eso/role-id)
 SECRET_ID=$(bao write -f -field=secret_id auth/approle/role/eso/secret-id)
 
-# 8. Inject the AppRole Secret ID into the external-secrets namespace
 kubectl -n external-secrets create secret generic openbao-approle \
   --from-literal=secret-id="$SECRET_ID"
 ```
 
-Verify that [`infrastructure/base/eso/clustersecretstore-openbao.yaml`] has the matching `roleId`, if you completed the above do `echo $ROLE_ID`.
+Put `$ROLE_ID` into `infrastructure/base/eso/clustersecretstore-openbao.yaml`.
+
+> `secret_id_ttl=0` means the secret ID never expires. See [limitations](#️-known-limitations).
+
+</details>
 
 ---
 
-## 🌊 ArgoCD Sync Wave Architecture
+## 📊 Observability
 
-ArgoCD synchronizes manifests in deterministic waves to ensure dependency ordering across namespaces, credentials, databases, and services:
+Stack: kube-prometheus-stack, Grafana and Coroot (eBPF service map with built-in SLO views). I am consolidating on the Grafana stack, and Coroot has been useful for service discovery. **There is currently no alert delivery.** See [limitations](#️-known-limitations).
 
-```mermaid
-flowchart LR
-    W10["Wave -10<br/>Namespaces"] --> W6["Wave -6<br/>ExternalSecrets"]
-    W6 --> W1["Wave 1<br/>Operators"]
-    W1 --> W2["Wave 2<br/>CNPG DB Clusters"]
-    W2 --> W3["Wave 3<br/>Jobs"]
-    W3 --> W5["Wave 5<br/>Applications"]
-    W5 --> W10P["Wave 10<br/>Post-Deploy Jobs"]
+| Service | LoadBalancer IP | Port |
+| :--- | :--- | :--- |
+| ArgoCD | `192.168.2.206` | 80 / 443 |
+| Grafana | `192.168.2.230` | 80 |
+| Prometheus | `192.168.2.231` | 9090 |
+| Local Gateway | `192.168.2.240` | 80 / 443 |
+
+---
+
+## 🗄 Backups & disaster recovery
+
+The full plan, with runbooks per failure scenario and a drill log, is in [`docs/disaster-recovery.md`](docs/disaster-recovery.md). Summary:
+
+| Layer | What | Where | Schedule / retention | Restore documented | Last drill |
+| :--- | :--- | :--- | :--- | :---: | :--- |
+| Cluster | Everything in Git, rebuilt with Terraform | GitHub + Terraform state on NAS | n/a (rebuilt, not restored) | ✅ | Full rebuild, Oct 2026 |
+| CNPG (Barman) | Base backups + continuous WAL | MinIO on TrueNAS, `s3://database-backup/<db>` | See below | ✅ | Restored in the Oct 2026 rebuild |
+| OpenBao | Whole-VM backup + Raft snapshot | PBS + cron snapshot | Daily snapshot | ✅ | Not yet timed |
+| etcd / Talos | Not backed up, by design | n/a | n/a | ✅ (rebuild) | n/a |
+| Longhorn | Backup target configured, no volumes in use | n/a | n/a | n/a | n/a |
+| Personal data (TrueNAS) | ZFS replication to off-site NAS + encrypted Cloud Sync to B2 | Off-site TrueNAS, Backblaze B2 | See TrueNAS tasks | ✅ | Restored from B2. Off-site NAS restore **not yet tested**. |
+
+CNPG scheduled backups (UTC): `coroot-db` 00:00 · `immich-db` 00:10 · `authentik-db` 00:20 · `grafana-db` 01:00. Config is in `apps/base/backup/global-backup.yaml`.
+
+### Restoring a database
+
+Each database has an active manifest (`bootstrap.initdb`) and a `*.restore` variant (`bootstrap.recovery` from the S3 `externalClusters` entry).
+
+1. Replace `grafana-db.yaml` with the contents of `grafana-db.yaml.restore`.
+2. In the restored cluster, set a **new** `serverName` for its own backups. Keep the old `serverName` only in `externalClusters`, so the recovered cluster does not archive into the old cluster's path.
+3. Commit and push.
+4. ArgoCD syncs; CNPG recovers from the base backup and replays WAL.
+
+> On a full cluster rebuild the databases start **empty** (`initdb`) unless the recovery variants are committed before the first sync. See the [rebuild runbook](docs/disaster-recovery.md#s4-full-cluster-loss-rebuild).
+
+---
+
+## 🚀 Bootstrap guide
+
+**Prerequisites:** Proxmox VE with an API token; an S3-compatible store (MinIO) with `database-backup` and `pvc-backup` buckets; an OpenBao instance with AppRole enabled; a GitHub PAT with read access to this repo; `terraform`, `talosctl`, `kubectl`.
+
+<details>
+<summary>Step-by-step</summary>
+
+**1. Provision**
+
+```bash
+cd terraform
+cp examplevars.tfvars terraform.tfvars
+vi terraform.tfvars        # Proxmox API, S3 endpoint, GitHub token
+terraform init
+terraform apply
 ```
 
-| Wave | Phase | Target Resources | Description |
-| :---: | :--- | :--- | :--- |
-| **`-10`** | Namespaces | `Namespace` manifests  | Creates target namespaces before workload deployment. |
-| **`-6`** | Secrets | `ExternalSecret` manifests  | Pulls secrets from OpenBao into K8s Secrets before pods start. |
-| **`1`** | Operators | CloudNative-PG, Longhorn, ESO | Installs Custom Resource Definitions and controller operators. |
-| **`2`** | Databases | CNPG `Cluster` | Provisions HA PostgreSQL clusters and initializes Barman S3 replication. |
-| **`3`** | Jobs to be completed before application runtime | `Job` | RBAC-scoped sync jobs copying generated CNPG app credentials to service namespaces. |
-| **`5`** | Workloads | Grafana, Prometheus, Authentik, Immich, Websites, Renovate | Applications start up with database connectivity and secrets ready. |
-| **`10`** | Post-Sync | Housekeeping & validation | Post-application health verifications and backup verifications. |
+Terraform creates the VMs, installs Talos, bootstraps etcd, installs Cilium, Longhorn and ArgoCD, and applies the root app.
+
+**2. Get cluster access**
+
+```bash
+terraform output -raw kubeconfig > kubeconfig.yaml
+export KUBECONFIG="$(pwd)/kubeconfig.yaml"
+kubectl get nodes -o wide
+```
+
+**3. ArgoCD**
+
+```bash
+kubectl -n argocd-system get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d; echo
+```
+
+UI at `192.168.2.206` (set in `infrastructure/base/argocd/argocd-values`).
+
+**4. Secrets:** run the [OpenBao bootstrap](#-secrets-management) above. Creating the `openbao-approle` secret is a manual step.
+
+</details>
 
 ---
 
-## 📊 Observability & Monitoring Stack
+## 🔮 Roadmap
 
-The observability stack lives under [`monitoring/base/grafana-stack/`] and [`monitoring/base/coroot/`]. I will transition over to Grafana-stack only, but I liked coroot so far and found it useful.
+Ordered by how much each item closes a limitation above.
 
-### Dedicated Service LoadBalancer IPs (Cilium IPAM)
-
-Services are allocated dedicated LAN IPs from the Cilium `local-pool` for direct homelab access:
-
-| Service | LoadBalancer IP | Port | Description |
-| :--- | :--- | :--- | :--- |
-| **ArgoCD** | `192.168.2.206` | `80` / `443` | GitOps UI & API |
-| **Grafana** | `192.168.2.230` | `80` | Dashboards & visualization |
-| **Prometheus** | `192.168.2.231` | `9090` | Prometheus server & query API |
-| **Local Gateway** | `192.168.2.240` | `80` / `443` | Cilium Gateway API ingress |
-
----
-
-## 🗄 Database Management & Disaster Recovery
-
-### CNPG Init vs Restore Workflow
-
-For each database (`immich-db`, `authentik-db`, `coroot-db`, and `grafana-db`), manifests follow a structured lifecycle:
-
-1. **Initial Bootstrap (`*.init` / active manifest)**:
-   - File: [`grafana-db.yaml`]
-   - Uses `bootstrap.initdb` to create a fresh PostgreSQL cluster.
-   - Configures continuous WAL archiving to MinIO S3 (`s3://database-backup/grafana-db`).
-2. **Disaster Recovery / Migration (`*.restore`)**:
-   - File: [`grafana-db.yaml.restore`]
-   - Uses `bootstrap.recovery` from `externalClusters` pointing to the Barman S3 backup.
-   - Re-attaches to the existing WAL stream and restores to the latest transaction log.
-
-#### Restoring a Database from Backup
-To restore Grafana (or any database) from an existing S3 backup:
-1. Replace `grafana-db.yaml` with the contents of `grafana-db.yaml.restore`.
-2. Commit and push the changes to GitHub.
-3. ArgoCD syncs the manifest; CloudNative-PG boots from the S3 object store and replays WAL archives.
-
-### Scheduled S3 Backups
-
-Centralized in [`apps/base/backup/global-backup.yaml`]:
-- **Longhorn PVCs**: Daily snapshots and S3 backup retention (14 days).
-- **CNPG ScheduledBackups**:
-  - `00:00 UTC` - `coroot-db`
-  - `00:10 UTC` - `immich-db`
-  - `00:20 UTC` - `authentik-db`
-  - `01:00 UTC` - `grafana-db` 
-
----
-
-## 🔮 Roadmap & Future Plans
-
-- [ ] **Talos In-Place Rolling Upgrades**: Test non-disruptive OS upgrades from Talos v1.12.x to v1.13.x, have a bash script for this.
-- [ ] **DevContainers**: Standardized development environments for homelab services.
-- [ ] **Put all secrets in OpenBao**: Currently I put some secrets into the cluster when the cluster is build, ideally this should just be the OpenBao secret so that ArgoCD, S3 backups etc can be pulled from OpenBao.
-- [ ] **Change DB's to use a single template file that gets overwritten with Kustomize for each DB**: I have many DB manifests but it would be easier to have a template that I use Kustomize to change with.
-- [ ] **Move away completely from Cilium IPAM LB IP's**: Use the Gateway API for any external access in the cluster, I have experimental CRDS anyways so TCP route works through the Gateway API.
+1. **Alerting.** Alertmanager to a push channel plus an external dead-man switch.
+2. **Drills.** Time the off-site NAS restore and an OpenBao restore. Time a full rebuild and record it in the drill log.
+3. **Backup coverage.** Replicate the MinIO bucket data off-site.
+4. **Network policies.** Default-deny for the database and secrets namespaces, informed by Hubble flows.
+5. **Secrets hygiene.** Move to OpenTofu with state encryption, shrink the bootstrap secret set to the AppRole only, TTL-bound secret IDs, and codify OpenBao config.
+6. **CI validation.** `kustomize build` / `kubeconform` / `terraform validate` on pull requests.
+7. **DB manifests via Kustomize.** One base `Cluster` manifest, patched per database, plus a `restore` overlay so a rebuild can recover every database in one step.
+8. **Failure-domain review.** Decide on a third host for etcd.
+9. **Upgrade rehearsal.** Run the scripted rolling Talos/Kubernetes upgrade on a rebuilt cluster and record it.
+10. **Drop Cilium LB IPAM for external access.** Route through Gateway API only.
