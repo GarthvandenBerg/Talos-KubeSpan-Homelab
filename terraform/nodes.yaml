@@ -1,7 +1,7 @@
 cluster_name: talos-homelab-cluster
-talos_version: v1.14.5
+talos_version: v1.14.6
 factory_id: 2e8ffcf0dd969c688daa58b5629234fc77f803f52fa26a1cfca4efaf187ee641
-kube_version: 1.37.1
+kube_version: 1.37.2
 
 nodes:
   - name: talos-ctl-1

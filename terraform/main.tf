@@ -376,7 +376,7 @@ EOF
 }
 
 data "http" "gateway_api_manifests" {
-  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.7.0/experimental-install.yaml"
+  url = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.7.0/standard-install.yaml"
 }
 
 data "kubectl_file_documents" "gateway_crds" {
