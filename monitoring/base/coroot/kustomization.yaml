@@ -4,4 +4,4 @@ resources:
   - ./coroot-deployment/coroot/coroot-db-secret-sync.yaml
   - ./coroot-deployment/coroot/coroot-instance.yaml
   - ./coroot-deployment/coroot-db/coroot-db.yaml
-  - ./coroot-operator/kustomization.yaml
+  - ./coroot-operator

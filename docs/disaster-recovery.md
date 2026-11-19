@@ -164,9 +164,11 @@ Personal data comes back from the off-site NAS and B2. The cluster needs new Pro
 | Nov 19 2026 | 2 | 9:41am -> | Cluster Rebuilt - fully deleted VM's and rebuilt, restored DB's from S3 | | |
 
 Notes:
-helm add 
+helm repo add cilium, longhorn, argocd
 helm update
+
 make sure talos image on disk is latest to allow k8s version you want to apply to cluster
+
 customization:
     systemExtensions:
         officialExtensions:
@@ -174,3 +176,23 @@ customization:
             - siderolabs/nfs-utils
             - siderolabs/nfsd
             - siderolabs/util-linux-tools
+
+
+Proof of cluster reconstruction:
+$ k get nodes
+NAME             STATUS   ROLES           AGE   VERSION
+talos-ctl-1      Ready    control-plane   33d   v1.36.0
+talos-ctl-2      Ready    control-plane   33d   v1.36.0
+talos-ctl-3      Ready    control-plane   33d   v1.36.0
+talos-worker-1   Ready    worker          33d   v1.36.0
+talos-worker-2   Ready    worker          33d   v1.36.0
+
+$ k get nodes
+NAME             STATUS   ROLES           AGE   VERSION
+talos-ctl-1      Ready    control-plane   11m   v1.37.2
+talos-ctl-2      Ready    control-plane   11m   v1.37.2
+talos-ctl-3      Ready    control-plane   11m   v1.37.2
+talos-worker-1   Ready    <none>          11m   v1.37.2
+talos-worker-2   Ready    <none>          11m   v1.37.2
+
+For External-secrets I had to override to apply the CRD's first for the app to work.
