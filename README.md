@@ -121,11 +121,10 @@ I would not run this for other people yet. Here are the gaps, why they exist and
 
 | Limitation | Impact | Plan |
 | :--- | :--- | :--- |
-| **No network policies.** Cilium is installed but I have not written any `NetworkPolicy` / `CiliumNetworkPolicy`. The pod network is flat. | Any pod can reach any other pod, including PostgreSQL. A compromised workload could move laterally. Exposure is limited because nothing is port-forwarded and public traffic comes only through the Cloudflare Tunnel. | Observe flows with Hubble first, then default-deny the database and secrets namespaces, then expand outward. |
+| **No network policies.** Cilium is installed but I have not written any `NetworkPolicy` / `CiliumNetworkPolicy`. The pod network is flat. | Any pod can reach any other pod, including PostgreSQL. A compromised workload could move laterally. Exposure is limited because nothing is port-forwarded and public traffic comes only through the Cloudflare Tunnel. | Hubble is enabled but I have not used it yet. Observe real flows first, then default-deny the database and secrets namespaces, then expand outward. |
 | **Terraform state is unencrypted.** It is stored on my NAS and contains bootstrap credentials (ArgoCD repo access, S3 keys) and Talos secrets. | Anyone who can read the NAS path can read those secrets. | Move to OpenTofu and use its native state encryption. Reduce the bootstrap secret set to the OpenBao AppRole only. |
 | **ESO's AppRole `secret_id` never expires** (`secret_id_ttl=0`) and was created by hand. | A leaked secret ID stays valid until I revoke it. No rotation process exists. | TTL-bound secret ID with a rotation job. The token is already restricted by CIDR. |
 | **OpenBao is configured by hand.** The `bao` commands below are not code. | Policies and auth config are not reviewable in Git and could drift. | Codify them with the Vault provider (OpenTofu/Terraform). |
-| **Gateway API uses experimental-channel CRDs** (for TCPRoute). | APIs may change between releases and break routes on upgrade. | Move to standard-channel resources when TCPRoute graduates. |
 | **Public surface is small but not audited.** Only the personal websites are exposed, through Cloudflare Tunnel. | A tunnel misconfiguration would expose the website namespace. | Review the exposed routes and the Authentik coverage; add a short exposure checklist. |
 
 ### Reliability
@@ -135,7 +134,7 @@ I would not run this for other people yet. Here are the gaps, why they exist and
 | **Two Proxmox hosts + QDevice.** Three control planes cannot spread evenly across two hosts, so one host carries two of them. | Losing that host loses etcd quorum and the API server. Workloads keep running; changes stop. Because I don't snapshot etcd, recovery means a full rebuild. | Documented in the [DR plan](docs/disaster-recovery.md). Consider a third small host. |
 | **Longhorn is capped at two replicas** (two workers). Nothing uses it today. | A volume with one surviving replica is degraded and has no spare node to rebuild onto. | Add a worker, or accept the limit for the few volumes that need it. |
 | **Database data lives on node-local disks.** Failover is handled by CNPG replicas. | A node loss without a healthy replica means recovery from S3 backup instead of failover. | Run 2 instances for databases that matter. Only 2 workers are available, so 3 instances cannot be spread. |
-| **Backup location.** MinIO runs as a container on my main TrueNAS, in a zvol on the same zpool as my personal data. | Cluster backups share a failure domain with the NAS. Personal data has off-site copies; the MinIO bucket data does not yet. | Replicate the MinIO data to the off-site NAS and B2. |
+| **Backup location.** MinIO runs as a container on my main TrueNAS, in a zvol on the same zpool as my personal data. That storage is replicated to an off-site NAS and to the cloud. | Cluster backups share a failure domain with the main NAS. Off-site copies only help if the replication tasks really include the MinIO data, and I have not restored it from either copy. | Confirm what each replication and Cloud Sync task covers (file-level Cloud Sync cannot read a raw zvol), then test a restore of the MinIO data. |
 | **Not every restore is drilled.** The off-site NAS replica has not been restored, and OpenBao restore has not been timed. | An untested backup is an assumption. | Run the drills in the [DR plan](docs/disaster-recovery.md#drill-program) and record the timings. |
 | **No alerting.** Prometheus and Grafana run in-cluster and nothing notifies me. If a Proxmox host dies, I find out by looking. | I learn about problems late, and a dead cluster cannot alert on itself. | Alertmanager to a push channel plus an external dead-man switch (healthchecks.io on the Watchdog alert). |
 
@@ -170,12 +169,9 @@ Talos-Proxmox-Homelab/
 │   ├── staging/
 │   └── production/
 ├── monitoring/                  # kube-prometheus-stack, Grafana, Coroot (+ their CNPG clusters)
-│   ├── base/                    # authentik, backup, blog-site, ggprohn, immich, minecraft-server
-│   ├── staging/
-│   └── production/
 ├── clusters/                    # ArgoCD root application (app-of-apps)
 │   └── homelab-cluster/argocd/bootstrap/root-app.yaml
-├── config-outside-k8s/          # Configuration for components that run outside the cluster, Caddy and OpenBao
+├── config-outside-k8s/          # Custom Caddy image; built here, deployed as an LXC container on my Proxmox host
 └── docs/
     └── disaster-recovery.md     # DR plan, runbooks and drill log
 ```
@@ -205,10 +201,10 @@ Talos-Proxmox-Homelab/
 | Node | Role | IP | vCPU | RAM | Disk |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | `talos-ctl-1` | Control plane | `192.168.2.10` | 4 | 6 GB | 50 GB |
-| `talos-ctl-2` | Control plane | `192.168.2.11` | 2 | 5 GB | 50 GB |
-| `talos-ctl-3` | Control plane | `192.168.2.12` | 2 | 5 GB | 50 GB |
+| `talos-ctl-2` | Control plane | `192.168.2.11` | 4 | 6 GB | 50 GB |
+| `talos-ctl-3` | Control plane | `192.168.2.12` | 4 | 6 GB | 50 GB |
 | `talos-worker-1` | Worker | `192.168.2.20` | 6 | 16 GB | 200 GB |
-| `talos-worker-2` | Worker | `192.168.2.21` | 4 | 10 GB | 200 GB |
+| `talos-worker-2` | Worker | `192.168.2.21` | 6 | 16 GB | 200 GB |
 
 ---
 
@@ -380,8 +376,8 @@ Ordered by how much each item closes a limitation above.
 
 1. **Alerting.** Alertmanager to a push channel plus an external dead-man switch.
 2. **Drills.** Time the off-site NAS restore and an OpenBao restore. Time a full rebuild and record it in the drill log.
-3. **Backup coverage.** Replicate the MinIO bucket data off-site.
-4. **Network policies.** Default-deny for the database and secrets namespaces, informed by Hubble flows.
+3. **Backup coverage.** Confirm the MinIO data is covered by the off-site and cloud replication, and restore it from each.
+4. **Network policies.** Start using Hubble (enabled, unused so far), then default-deny the database and secrets namespaces.
 5. **Secrets hygiene.** Move to OpenTofu with state encryption, shrink the bootstrap secret set to the AppRole only, TTL-bound secret IDs, and codify OpenBao config.
 6. **CI validation.** `kustomize build` / `kubeconform` / `terraform validate` on pull requests.
 7. **DB manifests via Kustomize.** One base `Cluster` manifest, patched per database, plus a `restore` overlay so a rebuild can recover every database in one step.
