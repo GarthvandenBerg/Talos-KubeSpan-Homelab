@@ -5,6 +5,8 @@ metadata:
   namespace: longhorn-system
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   allowScheduling: true
   disks:
@@ -19,6 +21,8 @@ metadata:
   namespace: longhorn-system
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   allowScheduling: true
   disks:

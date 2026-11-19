@@ -4,7 +4,9 @@ metadata:
   name: ggprohn
   namespace: ggprohn-system
   labels:
-    app.kubernetes.io/name: ggpron 
+    app.kubernetes.io/name: ggprohn 
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   parentRefs:
     - name: cloudflare-gateway

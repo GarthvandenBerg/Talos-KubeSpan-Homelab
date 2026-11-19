@@ -4,17 +4,23 @@ metadata:
   name: local-path-system
   labels:
     pod-security.kubernetes.io/enforce: privileged
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: local-path-provisioner-service-account
   namespace: local-path-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: local-path-provisioner-role
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 rules:
   - apiGroups: [""]
     resources: ["nodes", "persistentvolumeclaims", "configmaps"]
@@ -33,6 +39,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: local-path-provisioner-bind
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -47,6 +55,8 @@ kind: Deployment
 metadata:
   name: local-path-provisioner
   namespace: local-path-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   replicas: 1
   selector:
@@ -60,7 +70,7 @@ spec:
       serviceAccountName: local-path-provisioner-service-account
       containers:
         - name: local-path-provisioner
-          image: rancher/local-path-provisioner:v0.0.36
+          image: rancher/local-path-provisioner:v0.0.37
           imagePullPolicy: IfNotPresent
           command:
             - local-path-provisioner
@@ -87,6 +97,7 @@ metadata:
   name: local-path
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
+    argocd.argoproj.io/sync-wave: "5"
 provisioner: rancher.io/local-path
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -96,6 +107,8 @@ kind: ConfigMap
 metadata:
   name: local-path-config
   namespace: local-path-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 data:
   config.json: |-
     {

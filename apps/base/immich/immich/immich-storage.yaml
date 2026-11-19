@@ -3,7 +3,7 @@ kind: PersistentVolume
 metadata:
   name: immich-nfs-pv
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   capacity:
     storage: 500Gi
@@ -21,7 +21,7 @@ metadata:
   name: immich-nfs-pvc
   namespace: immich
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   accessModes:
     - ReadWriteMany

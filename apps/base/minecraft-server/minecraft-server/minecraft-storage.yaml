@@ -3,18 +3,22 @@ kind: PersistentVolumeClaim
 metadata:
   name: minecraft-data-pvc
   namespace: minecraft-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   accessModes:
     - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: minecraft-mods-pvc
   namespace: minecraft-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   accessModes:
     - ReadWriteMany

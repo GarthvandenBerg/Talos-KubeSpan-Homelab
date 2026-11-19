@@ -5,6 +5,8 @@ metadata:
   namespace: blog-site-system
   labels:
     app.kubernetes.io/name: g-space-site
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   parentRefs:
     - name: cloudflare-gateway

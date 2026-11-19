@@ -3,13 +3,15 @@ kind: Namespace
 metadata:
   name: immich
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: immich
   namespace: argocd-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   project: default
   source:

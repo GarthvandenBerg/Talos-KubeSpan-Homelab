@@ -161,4 +161,4 @@ Personal data comes back from the off-site NAS and B2. The cluster needs new Pro
 | Date | Drill # | Start → end | Result | Problems found | Fixes |
 | :--- | :-: | :--- | :--- | :--- | :--- |
 | Oct 2026 | 1 | not recorded | Cluster rebuilt, DBs recovered from S3 | No Data | N/A |
-| Nov 19 2026 | 2 | 9am -> | Cluster Rebuilt-Repo name change, restored DB's from S3 | | |
+| Nov 19 2026 | 2 | 9am -> | Cluster Rebuilt - fully deleted VM's and rebuilt, restored DB's from S3 | | |

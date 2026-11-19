@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ggprohn-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10,6 +12,8 @@ metadata:
   namespace: ggprohn-system
   labels:
     app.kubernetes.io/name: ggprohn
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   replicas: 1
   selector:
@@ -51,6 +55,8 @@ kind: Service
 metadata:
   name: ggprohn
   namespace: ggprohn-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   type: ClusterIP
   ports:
