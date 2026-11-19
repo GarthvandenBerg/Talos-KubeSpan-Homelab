@@ -7,3 +7,10 @@ set -e
 # talosctl upgrade -n 192.168.2.10 ....
 
 # Also have the option to either update talos version or k8s version, check github for latest release of each and prompt if you want to update to the latest found online: e.g: 1.37.2
+
+# talosctl upgrade --nodes <node-ip> \
+#  --image factory.talos.dev/metal-installer/<schematic-id>:<version>
+
+#talosctl --nodes <control-plane-ip> upgrade-k8s --to <new-kubernetes-version>
+
+# Upgrades to the next nodes need to wait for the node to be fully healthy before continuing as to avoid any downtime.
