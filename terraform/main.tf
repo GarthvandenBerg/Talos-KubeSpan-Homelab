@@ -97,8 +97,8 @@ locals {
       target_node  = try(node.nodename, null)
       storage_pool = try(node.storage_pool, null) 
       mac          = try(node.mac, null)
-      cores        = 4 
-      memory       = 6144
+      cores        = 2
+      memory       = 5120
       disk         = "50G" 
       talos_image  = "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
     }
@@ -113,8 +113,8 @@ locals {
       target_node  = try(node.nodename, null) 
       storage_pool = try(node.storage_pool, null) 
       mac          = try(node.mac, null) 
-      cores        = 6
-      memory       = 16384
+      cores        = node.nodename == "picard" ? 4 : 6
+      memory       = node.nodename == "picard" ? 10240 : 16384
       disk         = "200G"
       talos_image  = "factory.talos.dev/nocloud-installer/${local.factory_id}:${local.talos_version}"
     }
@@ -129,7 +129,7 @@ resource "proxmox_virtual_environment_vm" "vm_instance" {
   machine    = "q35"
   on_boot    = true
   boot_order = ["scsi0", "ide2"]
-  scsi_hardware = "virtio-scsi-pci"
+  scsi_hardware = "virtio-scsi-single"
   operating_system {
     type     = "l26"
   }

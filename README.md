@@ -200,11 +200,13 @@ Talos-Proxmox-Homelab/
 
 | Node | Role | IP | vCPU | RAM | Disk |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| `talos-ctl-1` | Control plane | `192.168.2.10` | 4 | 6 GB | 50 GB |
-| `talos-ctl-2` | Control plane | `192.168.2.11` | 4 | 6 GB | 50 GB |
-| `talos-ctl-3` | Control plane | `192.168.2.12` | 4 | 6 GB | 50 GB |
+| `talos-ctl-1` | Control plane | `192.168.2.10` | 2 | 5 GB | 50 GB |
+| `talos-ctl-2` | Control plane | `192.168.2.11` | 2 | 5 GB | 50 GB |
+| `talos-ctl-3` | Control plane | `192.168.2.12` | 2 | 5 GB | 50 GB |
 | `talos-worker-1` | Worker | `192.168.2.20` | 6 | 16 GB | 200 GB |
-| `talos-worker-2` | Worker | `192.168.2.21` | 6 | 16 GB | 200 GB |
+| `talos-worker-2` | Worker | `192.168.2.21` | 4 | 10 GB | 200 GB |
+
+### Reason for choosing 2 cores, 5GB of RAM for Controlplanes is from testing with Cloud VPS where 4GB would give me OOM errors sometimes and 2 cores should be sufficient with this small cluster design/workload.
 
 ---
 
@@ -229,7 +231,7 @@ flowchart LR
 | `-8` | Operators (ESO, CNPG) | CRDs and controllers installed |
 | `-6` | `ClusterSecretStore` | Connection to OpenBao, needs the ESO webhook ready |
 | `-5` | ExternalSecrets | Secrets are synced before pods need them |
-| `2` | CNPG `Cluster` | Databases provisioned, S3 archiving configured |
+| `2` | CNPG `Cluster` and Storage | Databases provisioned, S3 archiving configured |
 | `3` | Jobs | Copy generated CNPG credentials into app namespaces |
 | `5` | Applications | Start with DB and secrets ready |
 | `10` | Post-sync | Validation / verification jobs |

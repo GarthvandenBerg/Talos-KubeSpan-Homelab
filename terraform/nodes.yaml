@@ -1,6 +1,6 @@
 cluster_name: talos-homelab-cluster
 talos_version: v1.14.6
-factory_id: 2e8ffcf0dd969c688daa58b5629234fc77f803f52fa26a1cfca4efaf187ee641
+factory_id: dfce9caa3b470c4e62bd44e9ea8922c91065a9a742af2e969c56edd1f9016192
 kube_version: 1.37.2
 
 nodes:
@@ -24,8 +24,8 @@ nodes:
     ip: 192.168.2.12
     type: controlplane
     platform: proxmox
-    nodename: kirk
-    storage_pool: ssd-pool
+    nodename: picard
+    storage_pool: local-zfs
     mac: bc:24:12:52:64:1b
 
   - name: talos-worker-1
@@ -40,6 +40,6 @@ nodes:
     ip: 192.168.2.21
     type: worker
     platform: proxmox
-    nodename: kirk
-    storage_pool: ssd-pool
+    nodename: picard
+    storage_pool: local-zfs
     mac: bc:24:11:26:84:95
