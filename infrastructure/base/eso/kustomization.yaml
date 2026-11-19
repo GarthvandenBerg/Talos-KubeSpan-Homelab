@@ -1,7 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-annotations:
-    argocd.argoproj.io/sync-wave: "-8"
 
 resources:
   - namespace.yaml
@@ -15,3 +13,11 @@ helmCharts:
     namespace: external-secrets
     includeCRDs: true
     valuesFile: eso-values.yaml
+
+patches:
+  - target:
+      labelSelector: app.kubernetes.io/instance=external-secrets
+    patch: |
+      - op: add
+        path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+        value: "-8"
