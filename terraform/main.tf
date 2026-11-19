@@ -534,7 +534,7 @@ resource "kubernetes_secret_v1" "argocd_repo_creds" {
 
   data = {
     type     = "git"
-    url      = "https://github.com/GarthvandenBerg/Talos-KubeSpan-Homelab.git"
+    url      = "https://github.com/GarthvandenBerg/Talos-Proxmox-Homelab.git"
     username = var.GIT_KEY 
     password = var.GIT_PASS 
   }

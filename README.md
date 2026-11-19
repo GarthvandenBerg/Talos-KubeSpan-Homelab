@@ -1,7 +1,7 @@
 # Talos + Proxmox Kubernetes Homelab
 
 [![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.14.5-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.37.1-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.37.2-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 [![Cilium](https://img.shields.io/badge/CNI-Cilium_eBPF-brightgreen?logo=cilium&logoColor=white)](https://cilium.io/)
 [![Storage](https://img.shields.io/badge/Storage-Longhorn_%26_Local--Path-blueviolet)](https://longhorn.io/)
@@ -15,7 +15,7 @@ A five-node Talos Linux Kubernetes cluster on a two-node Proxmox VE cluster. I b
 
 **Jump to:** [At a glance](#-at-a-glance) · [Architecture](#-architecture) · [Decisions](#-key-decisions) · [Limitations](#️-known-limitations) · [Backups & DR](#-backups--disaster-recovery) · [Bootstrap](#-bootstrap-guide) · [Roadmap](#-roadmap)
 
-> The repository is being renamed to `Talos-Proxmox-Homelab`. It was originally `Talos-KubeSpan-Homelab` from when one control-plane node lived in the cloud and used KubeSpan. All nodes are now local and KubeSpan is no longer used. Private access is handled by NetBird (see [Networking and exposure](#-networking-and-exposure)).
+> The repository has been renamed to `Talos-Proxmox-Homelab`. It was originally `Talos-KubeSpan-Homelab` from when one control-plane node lived in the cloud and used KubeSpan. All nodes are now local and KubeSpan is no longer used. Private access is handled by NetBird (see [Networking and exposure](#-networking-and-exposure)).
 
 ---
 
