@@ -228,12 +228,13 @@ flowchart LR
 | Wave | Resources | Purpose |
 | :---: | :--- | :--- |
 | `-10` | Namespaces | Exist before anything lands in them |
-| `-8` | Operators (ESO, CNPG) | CRDs and controllers installed |
+| `-9` | CRDs (ESO, Grafana, etc...) | CRDs installed |
+| `-8` | Operators (ESO, CNPG, Cilium, etc...) | Operators/Controllers installed |
 | `-6` | `ClusterSecretStore` | Connection to OpenBao, needs the ESO webhook ready |
 | `-5` | ExternalSecrets | Secrets are synced before pods need them |
-| `2` | CNPG `Cluster` and Storage | Databases provisioned, S3 archiving configured |
-| `3` | Jobs | Copy generated CNPG credentials into app namespaces |
-| `5` | Applications | Start with DB and secrets ready |
+| `2` | CNPG `Cluster` and Storage | Databases provisioned, Longhorn storage and NFS |
+| `3` | Jobs | Copy generated CNPG credentials into app namespaces or jobs to be run before an app can run |
+| `5` | Applications | Deploy applications after everything is ready for it to be used |
 | `10` | Post-sync | Validation / verification jobs |
 
 Sync waves order resources **within one Application**. Across Applications in the app-of-apps pattern, ordering depends on the wave annotations on the child `Application` resources in the root app and on ArgoCD's health assessment of them.
@@ -257,6 +258,7 @@ bao secrets enable -path=secret kv-v2
 bao kv put secret/staging/grafana admin-user=admin admin-password="$(openssl rand -base64 24)"
 bao kv put secret/staging/cloudflare token="<CLOUDFLARE_TOKEN>"
 bao kv put secret/staging/renovate github-token="<GITHUB_TOKEN>"
+bao kv put secret/staging/s3 AWS_ACCESS_KEY_ID="key" AWS_SECRET_ACCESS_KEY="key" AWS_ENDPOINTS="s3.domain.com" db_bucket="s3://database-backup" pvc_bucket="s3://pvc-store"
 
 # 3. Read-only policy for ESO
 bao policy write eso-read - <<'POL'
@@ -264,7 +266,7 @@ path "secret/data/staging/*"     { capabilities = ["read"] }
 path "secret/metadata/staging/*" { capabilities = ["read", "list"] }
 POL
 
-# 4. AppRole (restrict token use to your cluster's node CIDR)
+# 4. AppRole (restrict token use to your cluster's node CIDR or Proxy if using internal Caddy server like I am)
 bao auth enable approle
 bao write auth/approle/role/eso \
   token_policies=eso-read \
@@ -276,6 +278,9 @@ bao write auth/approle/role/eso \
 # 5. Generate credentials and give the secret ID to the cluster
 ROLE_ID=$(bao read -field=role_id auth/approle/role/eso/role-id)
 SECRET_ID=$(bao write -f -field=secret_id auth/approle/role/eso/secret-id)
+
+# 6. Add the SECRET_ID to your terraform.tfvars or manually apply like this after ArgoCD is up, also add your ROLE_ID 
+# to the ESO manifest: infrastructure\base\eso\clustersecretstore-openbao.yaml
 
 kubectl -n external-secrets create secret generic openbao-approle \
   --from-literal=secret-id="$SECRET_ID"
@@ -308,8 +313,8 @@ The full plan, with runbooks per failure scenario and a drill log, is in [`docs/
 
 | Layer | What | Where | Schedule / retention | Restore documented | Last drill |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| Cluster | Everything in Git, rebuilt with Terraform | GitHub + Terraform state on NAS | n/a (rebuilt, not restored) | ✅ | Full rebuild, Oct 2026 |
-| CNPG (Barman) | Base backups + continuous WAL | MinIO on TrueNAS, `s3://database-backup/<db>` | See below | ✅ | Restored in the Oct 2026 rebuild |
+| Cluster | Everything in Git, rebuilt with Terraform | GitHub + Terraform state on NAS | n/a (rebuilt, not restored) | ✅ | Full rebuild, Nov 19 2026 |
+| CNPG (Barman) | Base backups + continuous WAL | MinIO on TrueNAS, `s3://database-backup/<db>` | See below | ✅ | Restored in the Nov 19 2026 rebuild |
 | OpenBao | Whole-VM backup + Raft snapshot | PBS + cron snapshot | Daily snapshot | ✅ | Not yet timed |
 | etcd / Talos | Not backed up, by design | n/a | n/a | ✅ (rebuild) | n/a |
 | Longhorn | Backup target configured, no volumes in use | n/a | n/a | n/a | n/a |
@@ -337,25 +342,25 @@ Each database has an active manifest (`bootstrap.initdb`) and a `*.restore` vari
 <details>
 <summary>Step-by-step</summary>
 
-**1. Provision**
+**1. Install required cli tools**
+- terraform
+- helm
 
+**2. Provision**
 ```bash
 cd terraform
 cp examplevars.tfvars terraform.tfvars
 vi terraform.tfvars        # Proxmox API, S3 endpoint, GitHub token
 terraform init
+
+helm repo add cilium https://helm.cilium.io/
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
 terraform apply
 ```
 
 Terraform creates the VMs, installs Talos, bootstraps etcd, installs Cilium, Longhorn and ArgoCD, and applies the root app.
-
-**2. Get cluster access**
-
-```bash
-terraform output -raw kubeconfig > kubeconfig.yaml
-export KUBECONFIG="$(pwd)/kubeconfig.yaml"
-kubectl get nodes -o wide
-```
 
 **3. ArgoCD**
 
@@ -376,13 +381,12 @@ UI at `192.168.2.206` (set in `infrastructure/base/argocd/argocd-values`).
 
 Ordered by how much each item closes a limitation above.
 
-1. **Alerting.** Alertmanager to a push channel plus an external dead-man switch.
-2. **Drills.** Time the off-site NAS restore and an OpenBao restore. Time a full rebuild and record it in the drill log.
-3. **Backup coverage.** Confirm the MinIO data is covered by the off-site and cloud replication, and restore it from each.
-4. **Network policies.** Start using Hubble (enabled, unused so far), then default-deny the database and secrets namespaces.
-5. **Secrets hygiene.** Move to OpenTofu with state encryption, shrink the bootstrap secret set to the AppRole only, TTL-bound secret IDs, and codify OpenBao config.
-6. **CI validation.** `kustomize build` / `kubeconform` / `terraform validate` on pull requests.
-7. **DB manifests via Kustomize.** One base `Cluster` manifest, patched per database, plus a `restore` overlay so a rebuild can recover every database in one step.
-8. **Failure-domain review.** Decide on a third host for etcd.
-9. **Upgrade rehearsal.** Run the scripted rolling Talos/Kubernetes upgrade on a rebuilt cluster and record it.
-10. **Drop Cilium LB IPAM for external access.** Route through Gateway API only.
+1. **Alerting.** Configure UpTime Kuma on my Proxmox Q-Device node for service monitoring and endpoint uptime check.
+2. **Network policies.** Start using Hubble (enabled, unused so far), then default-deny the database and secrets namespaces.
+3. **Secrets hygiene.** Move to OpenTofu with state encryption, shrink the bootstrap secret set to the AppRole only, TTL-bound secret IDs, and codify OpenBao config.
+4. **CI validation.** `kustomize build` / `kubeconform` / `terraform validate` on pull requests.
+5. **DB manifests via Kustomize.** One base `Cluster` manifest, patched per database, plus a `restore` overlay so a rebuild can recover every database in one step.
+6. **Upgrade rehearsal.** Run the scripted rolling Talos/Kubernetes upgrade on a rebuilt cluster and record it.
+7. **Drop Cilium LB IPAM for external access.** Route through Gateway API only.
+8. **DevContainer for Init.** Add all of the things required to start the rebuild in a single DevContainer.
+9. **Migrate from Minio.** Minio is not getting any updates, so either use TrueNAS native s3 which is not yet out or use a Garage container instead.

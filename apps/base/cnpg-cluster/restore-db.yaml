@@ -1,0 +1,61 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: app-db
+  namespace: database-system
+  annotations:
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  instances: 2
+
+  affinity:
+    podAntiAffinityType: required
+
+  managed:
+    roles:
+      - name: app
+        ensure: present
+        login: true
+        passwordSecret:
+          name: app-db-app
+
+  bootstrap:
+    recovery:
+      source: app-db
+      database: app
+      owner: app
+
+  storage:
+    size: 10Gi
+    storageClass: local-path
+
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://database-backup/app-db"
+      endpointURL: "https://s3back.g-space.co.za"
+      s3Credentials:
+        accessKeyId:
+          name: s3-details
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: s3-details
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+
+  externalClusters:
+    - name: app-db
+      barmanObjectStore:
+        destinationPath: "s3://database-backup/app-db"
+        endpointURL: "https://s3back.g-space.co.za"
+        wal:
+          maxParallel: 8
+        s3Credentials:
+          accessKeyId:
+            name: s3-details
+            key: AWS_ACCESS_KEY_ID
+          secretAccessKey:
+            name: s3-details
+            key: AWS_SECRET_ACCESS_KEY

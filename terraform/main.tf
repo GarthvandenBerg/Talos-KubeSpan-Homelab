@@ -11,38 +11,20 @@ variable "proxmox_api_token_secret" {
   sensitive = true 
 }
 
-variable "s3_access_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "s3_secret_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "s3_endpoint" {
-  type      = string
-}
-
-variable "s3_db_bucket"{
-  type      = string
-}
-
-variable "s3_pvc_bucket"{
-  type      = string
-}
-
 variable "K8SSERVICEHOST" { 
   type = string 
 }
 
-variable "GIT_KEY" { 
+variable "GIT_NAME" { 
+  type      = string
+}
+
+variable "GIT_PASS" { 
   type      = string
   sensitive = true 
 }
 
-variable "GIT_PASS" { 
+variable "OPEN_BAO_SECRET_ID" { 
   type      = string
   sensitive = true 
 }
@@ -447,69 +429,6 @@ resource "kubectl_manifest" "cilium_resources" {
   depends_on = [time_sleep.wait_for_cilium_crds]
 }
 
-data "kubectl_file_documents" "longhorn_rbac_docs" {
-  content = file("${local.system_path}/longhorn/longhorn-rbac.yaml")
-}
-
-# Apply the RBAC manifests for longhorn
-resource "kubectl_manifest" "longhorn_rbac" {
-  for_each  = data.kubectl_file_documents.longhorn_rbac_docs.manifests
-  yaml_body = each.value
-  depends_on = [kubectl_manifest.cilium_resources]
-}
-
-resource "kubernetes_namespace_v1" "longhorn_system" {
-  metadata {
-    name = "longhorn-system"
-    labels = {
-      "pod-security.kubernetes.io/enforce"         = "privileged"
-      "pod-security.kubernetes.io/enforce-version" = "latest"
-      "pod-security.kubernetes.io/audit"           = "privileged"
-      "pod-security.kubernetes.io/warn"            = "privileged"
-    }
-  }
-  depends_on = [kubectl_manifest.cilium_resources]
-}
-
-resource "helm_release" "longhorn" {
-  name             = "longhorn"
-  repository       = "https://charts.longhorn.io"
-  chart            = "longhorn"
-  namespace        = "longhorn-system"
-  create_namespace = true
-  
-  depends_on = [kubectl_manifest.longhorn_rbac, kubernetes_namespace_v1.longhorn_system]
-
-  values = [
-    file("${local.system_path}/longhorn/longhorn-values.yaml")
-  ]
-}
-
-resource "kubernetes_namespace_v1" "apps" {
-  for_each = toset(["database-system"])
-  metadata {
-    name = each.value
-  }
-  depends_on = [helm_release.longhorn]
-}
-
-# S3 Details 
-resource "kubernetes_secret_v1" "s3_details" {
-  for_each = toset(["database-system", "longhorn-system"])
-  metadata {
-    name      = "s3-details"
-    namespace = each.value
-  }
-  data = {
-    AWS_ACCESS_KEY_ID     = var.s3_access_key
-    AWS_SECRET_ACCESS_KEY = var.s3_secret_key
-    AWS_ENDPOINTS         = var.s3_endpoint
-    db_bucket             = var.s3_db_bucket
-    pvc_bucket            = var.s3_pvc_bucket
-  }
-  depends_on = [kubernetes_namespace_v1.apps, kubernetes_namespace_v1.longhorn_system]
-}
-
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -520,7 +439,7 @@ resource "helm_release" "argocd" {
   values = [
     file("${local.system_path}/argocd/argocd-values.yaml")
   ]
-  depends_on = [helm_release.longhorn]
+  depends_on = [kubectl_manifest.cilium_resources]
 }
 
 resource "kubernetes_secret_v1" "argocd_repo_creds" {
@@ -535,7 +454,7 @@ resource "kubernetes_secret_v1" "argocd_repo_creds" {
   data = {
     type     = "git"
     url      = "https://github.com/GarthvandenBerg/Talos-Proxmox-Homelab.git"
-    username = var.GIT_KEY 
+    username = var.GIT_NAME 
     password = var.GIT_PASS 
   }
 
@@ -550,3 +469,32 @@ resource "kubectl_manifest" "argocd_root_app" {
     kubernetes_secret_v1.argocd_repo_creds
   ]
 }
+
+resource "kubectl_manifest" "external_secrets_namespace" {
+  yaml_body = <<YAML
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external_secrets
+YAML
+
+  depends_on = [helm_release.argocd, kubernetes_secret_v1.argocd_repo_creds]
+}
+
+resource "kubectl_manifest" "openbao_secret" {
+  sensitive_fields = ["data"]
+
+  yaml_body = <<YAML
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openbao-approle
+  namespace: external-secrets
+type: Opaque
+data:
+  secret-id: ${base64encode(var.OPEN_BAO_SECRET_ID)}
+YAML
+
+  depends_on = [helm_release.argocd, kubernetes_secret_v1.argocd_repo_creds, kubectl_manifest.external_secrets_namespace]
+}
+

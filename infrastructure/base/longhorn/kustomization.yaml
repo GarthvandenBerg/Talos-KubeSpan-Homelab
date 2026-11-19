@@ -5,6 +5,7 @@ resources:
   - longhorn-rbac.yaml
   - worker-label.yaml
   - worker-schedule.yaml
+  - s3-externalsecrets.yaml
 
 helmCharts:
   - name: longhorn
@@ -21,3 +22,9 @@ patches:
       - op: add
         path: /metadata/annotations/argocd.argoproj.io~1sync-wave
         value: "-8"
+  - target:
+      kind: CustomResourceDefinition
+    patch: |-
+      - op: add
+        path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+        value: "-9"

@@ -4,3 +4,10 @@ metadata:
   name: cnpg-system
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"

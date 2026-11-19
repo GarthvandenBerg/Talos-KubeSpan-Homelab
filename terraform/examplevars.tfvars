@@ -1,16 +1,11 @@
-proxmox_api_url = "https://node.domain.com:8006/api2/json" # or just https://nodeipaddress:8006/api2/json
-proxmox_api_token_id = "Secret"
-proxmox_api_token_secret = "Key"
+proxmox_api_url = "https://node.domain.com/api2/json" # or just https://nodeipaddress:8006/api2/json
+proxmox_api_token_id = "terraform@pam!terrafrom-use"
+proxmox_api_token_secret = "Your API Key"
 
-s3_access_key = "Key"
-s3_secret_key = "Secret"
-s3_endpoint = "192.168.1.110:9000"
-s3_db_bucket = "s3://database-backup"
-s3_pvc_bucket = "s3://pvc-store"
-
+# Put your cluster's VIP here (Virtual IP) .talos/patches/vip-patch.yaml
 K8SSERVICEHOST = "192.168.2.5"
 
-GIT_KEY = "can be anything normally your name"
+GIT_NAME = "GitHub Username"
 GIT_PASS = "Token generated in github"
 
-nb_key = "key"
+OPEN_BAO_SECRET_ID = "Secret_ID"
