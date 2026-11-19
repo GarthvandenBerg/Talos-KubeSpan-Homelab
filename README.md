@@ -1,6 +1,6 @@
 # Talos + Proxmox Kubernetes Homelab
 
-[![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.14.5-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
+[![Talos Linux](https://img.shields.io/badge/Talos_Linux-v1.14.6-blue?logo=talos&logoColor=white)](https://www.talos.dev/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.37.2-blue?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-orange?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 [![Cilium](https://img.shields.io/badge/CNI-Cilium_eBPF-brightgreen?logo=cilium&logoColor=white)](https://cilium.io/)
