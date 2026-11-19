@@ -22,4 +22,10 @@ patches:
     patch: |
       - op: add
         path: /metadata/annotations/argocd.argoproj.io~1sync-wave
-        value: "-8"
+        value: "5"
+  - target:
+      kind: CustomResourceDefinition
+    patch: |-
+      - op: add
+        path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+        value: "-9"
