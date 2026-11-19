@@ -30,7 +30,7 @@ A five-node Talos Linux Kubernetes cluster on a two-node Proxmox VE cluster. I b
 | **Secrets** | OpenBao (outside the cluster) → External Secrets Operator → Kubernetes Secrets. No plaintext secrets in Git. |
 | **Networking** | Cilium (kube-proxy replacement, Gateway API, LB IPAM). Public websites via Cloudflare Tunnel (CFGate). Private apps via NetBird. No inbound ports are open. |
 | **Workloads** | Immich (the only app used by friends and family), personal websites, Minecraft, Authentik, Renovate, Prometheus/Grafana, Coroot |
-| **Restore drills** | Full cluster rebuild from Terraform + Git with databases restored from S3 (October 2026). Not every layer has been drilled. See [Backups & DR](#-backups--disaster-recovery) and the [DR plan](docs/disaster-recovery.md). |
+| **Restore drills** | Full cluster rebuild from Terraform + Git with databases restored from S3 (November 19 2026). Not every layer has been drilled. See [Backups & DR](#-backups--disaster-recovery) and the [DR plan](docs/disaster-recovery.md). |
 
 ---
 
@@ -337,7 +337,7 @@ Each database has an active manifest (`bootstrap.initdb`) and a `*.restore` vari
 
 ## 🚀 Bootstrap guide
 
-**Prerequisites:** Proxmox VE with an API token; an S3-compatible store (MinIO) with `database-backup` and `pvc-backup` buckets; an OpenBao instance with AppRole enabled; a GitHub PAT with read access to this repo; `terraform`, `talosctl`, `kubectl`.
+**Prerequisites:** Proxmox VE with an API token; an S3-compatible store (MinIO) with `database-backup` and `pvc-store` buckets; an OpenBao instance with AppRole enabled; a GitHub PAT with read access to this repo; `terraform`, `talosctl`, `kubectl`.
 
 <details>
 <summary>Step-by-step</summary>
