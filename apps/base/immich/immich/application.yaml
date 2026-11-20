@@ -25,7 +25,7 @@ spec:
             containers:
               main:
                 image:
-                  tag: v3.4.2
+                  tag: v3.4.2 # renovate: datasource=docker depName=ghcr.io/immich-app/immich-server
                 env:
                   DB_HOSTNAME: immich-db-rw.database-system.svc.cluster.local
                   DB_USERNAME: immich

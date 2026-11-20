@@ -4,6 +4,8 @@ Scope: the Talos + Proxmox homelab cluster and the services it depends on (OpenB
 
 **Status: targets below are goals, not measurements.** The measured column is filled in only after a drill. Until then it says "not measured".
 
+**External alerting to cluster state** - Done with Uptime Kuma on an external node (QDevice), sent via Discord with a Webhook.
+
 ---
 
 ## 1. Principles
@@ -141,7 +143,6 @@ Personal data comes back from the off-site NAS and B2. The cluster needs new Pro
 | OpenBao backups and Terraform state: off-site copy unconfirmed | Site loss blocks a rebuild | Confirm, then copy off-site |
 | Unseal keys / root token storage | Cannot unseal after restore | Confirm they are stored offline in two places |
 | Terraform state unencrypted | Secret exposure | Move to OpenTofu state encryption |
-| No alerting | A backup failure goes unnoticed | Alertmanager push channel + dead-man switch; alert on failed CNPG backups |
 | Restore variants are swapped by hand | Slow and error-prone during a rebuild | Kustomize `restore` overlay |
 
 ---

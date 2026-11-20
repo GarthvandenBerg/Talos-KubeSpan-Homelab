@@ -10,33 +10,43 @@
   "timezone": "Africa/Johannesburg",
   "prHourlyLimit": 5,
   "prConcurrentLimit": 10,
-  "kustomize": {
-    "fileMatch": ["(^|/)kustomization\\.ya?ml$"]
+  "automerge": false,
+  "platformAutomerge": false,
+
+  "argocd": {
+    "managerFilePatterns": ["/\\.ya?ml$/"]
   },
-  "helmv3": {
-    "fileMatch": ["(^|/)kustomization\\.ya?ml$"]
+  "kubernetes": {
+    "managerFilePatterns": ["/\\.ya?ml$/"]
   },
+
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Inline '# renovate:' annotations in any YAML (image tags inside Argo values, CRDs, etc.)",
+      "managerFilePatterns": ["/\\.ya?ml$/"],
+      "matchStrings": [
+        "(?:image|tag):\\s*[\"']?(?:[^\\s:\"'#]+:)?(?<currentValue>[^\\s\"'#]+)[\"']?\\s*#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}"
+    }
+  ],
+
   "packageRules": [
     {
-      "description": "Do NOT update Talos Linux or Talos Terraform providers - managed manually",
-      "matchPackagePatterns": [
-        "talos",
-        "siderolabs/talos",
-        "talosctl"
-      ],
+      "description": "Do NOT update Talos - managed manually",
+      "matchPackageNames": ["/talos/", "siderolabs/talos", "talosctl"],
       "enabled": false
     },
     {
       "description": "Pin PostgreSQL to 16 for CloudNative-PG",
-      "matchPackageNames": [
-        "ghcr.io/cloudnative-pg/postgresql"
-      ],
+      "matchPackageNames": ["ghcr.io/cloudnative-pg/postgresql"],
       "allowedVersions": "<17.0.0"
     },
     {
-      "description": "Separate PRs for core infrastructure Helm charts",
-      "matchDatasources": ["helm"],
-      "groupName": null
+      "description": "Never automerge anything",
+      "matchPackageNames": ["*"],
+      "automerge": false
     }
   ]
 }
