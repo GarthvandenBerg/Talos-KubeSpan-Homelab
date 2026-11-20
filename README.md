@@ -258,7 +258,7 @@ bao secrets enable -path=secret kv-v2
 bao kv put secret/staging/grafana admin-user=admin admin-password="$(openssl rand -base64 24)"
 bao kv put secret/staging/cloudflare token="<CLOUDFLARE_TOKEN>"
 bao kv put secret/staging/renovate github-token="<GITHUB_TOKEN>"
-bao kv put secret/staging/s3 AWS_ACCESS_KEY_ID="key" AWS_SECRET_ACCESS_KEY="key" AWS_ENDPOINTS="s3.domain.com" db_bucket="s3://database-backup" pvc_bucket="s3://pvc-store"
+bao kv put secret/staging/s3 AWS_ACCESS_KEY_ID="key" AWS_SECRET_ACCESS_KEY="key" AWS_ENDPOINTS="s3.domain.com" db_bucket="s3://database-backup" pvc_bucket="s3://pvc-backup"
 
 # 3. Read-only policy for ESO
 bao policy write eso-read - <<'POL'
@@ -337,7 +337,7 @@ Each database has an active manifest (`bootstrap.initdb`) and a `*.restore` vari
 
 ## 🚀 Bootstrap guide
 
-**Prerequisites:** Proxmox VE with an API token; an S3-compatible store (MinIO) with `database-backup` and `pvc-store` buckets; an OpenBao instance with AppRole enabled; a GitHub PAT with read access to this repo; `terraform`, `talosctl`, `kubectl`.
+**Prerequisites:** Proxmox VE with an API token; an S3-compatible store (MinIO) with `database-backup` and `pvc-backup` buckets; an OpenBao instance with AppRole enabled; a GitHub PAT with read access to this repo; `terraform`, `talosctl`, `kubectl`.
 
 <details>
 <summary>Step-by-step</summary>
