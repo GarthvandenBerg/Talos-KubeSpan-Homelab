@@ -475,7 +475,7 @@ resource "kubectl_manifest" "external_secrets_namespace" {
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: external_secrets
+  name: external-secrets
 YAML
 
   depends_on = [helm_release.argocd, kubernetes_secret_v1.argocd_repo_creds]
@@ -497,4 +497,3 @@ YAML
 
   depends_on = [helm_release.argocd, kubernetes_secret_v1.argocd_repo_creds, kubectl_manifest.external_secrets_namespace]
 }
-
