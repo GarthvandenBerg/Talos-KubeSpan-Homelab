@@ -7,6 +7,9 @@ global:
       operator: "Exists"
       effect: "NoSchedule"
 
+preUpgradeChecker:
+  jobEnabled: false
+
 defaultSettings:
   createDefaultDiskLabeledNodes: true
   taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule;node.cilium.io/agent-not-ready:NoSchedule"
