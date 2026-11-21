@@ -19,7 +19,7 @@ defaultSettings:
   mkfsPropagateAllowed: true
   mkfsExt4Parameters: "-O ^64bit,^metadata_csum"
   backupTarget: "s3://pvc-backup/longhorn/"
-  backupTargetCredentialSecret: "longhorn-minio-creds"
+  backupTargetCredentialSecret: "s3-details"
   backupstorePollInterval: 300
   recurringJobSelector: '[{"name":"daily-backup", "isGroup":true}]'
   storageOverProvisioningPercentage: 500

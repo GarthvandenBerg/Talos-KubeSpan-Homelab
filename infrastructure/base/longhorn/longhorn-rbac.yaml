@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: longhorn-csi-extensions
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "-9"
 rules:
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattributesclasses"]
@@ -14,7 +14,7 @@ kind: ClusterRoleBinding
 metadata:
   name: longhorn-csi-extensions-binding
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "-9"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

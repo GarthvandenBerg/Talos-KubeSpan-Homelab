@@ -6,6 +6,7 @@ resources:
   - worker-label.yaml
   - worker-schedule.yaml
   - s3-externalsecrets.yaml
+  - namespace.yaml
 
 helmCharts:
   - name: longhorn
@@ -24,6 +25,13 @@ patches:
         value: "-8"
   - target:
       kind: CustomResourceDefinition
+    patch: |-
+      - op: add
+        path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+        value: "-9"
+  - target:
+      kind: ServiceAccount
+      namespace: longhorn-system
     patch: |-
       - op: add
         path: /metadata/annotations/argocd.argoproj.io~1sync-wave
